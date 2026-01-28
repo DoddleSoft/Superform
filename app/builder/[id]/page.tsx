@@ -1,13 +1,19 @@
+import { Sidebar } from "@/components/builder/Sidebar";
+import { Canvas } from "@/components/builder/Canvas";
+import { PropertiesPanel } from "@/components/builder/PropertiesPanel";
+
 export default async function BuilderPage({
     params,
 }: {
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+
     return (
-        <div className="p-8">
-            <h1 className="text-2xl font-bold">Form Builder</h1>
-            <p className="text-gray-500 mt-2">Form ID: {id}</p>
+        <div className="flex h-[calc(100vh-theme(spacing.16))] w-full">
+            <Sidebar />
+            <Canvas />
+            <PropertiesPanel />
         </div>
     );
 }
