@@ -20,7 +20,7 @@ export default function DashboardLayout({
                             Superform
                         </Link>
                     </div>
-                    <div className="flex-none gap-4">
+                    <div className="flex-none flex items-center gap-4">
                         <WorkspaceSwitcher />
                         <ThemeToggle />
                         <UserButton />
