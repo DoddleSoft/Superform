@@ -1,6 +1,14 @@
 # Superform
 
-A form builder application built with Next.js.
+A form builder application built with Next.js, allowing users to create, publish, and collect responses for forms.
+
+## Features
+
+### Multi-Workspace Support
+- **Default Workspace**: Automatically created for every new user ("My Workspace").
+- **Workspace Management**: Users can create multiple workspaces to organize forms.
+- **Context Switching**: Seamlessly switch between workspaces from the dashboard header.
+
 
 ## Tech Stack
 
