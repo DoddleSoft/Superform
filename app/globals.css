@@ -3,6 +3,22 @@
   themes: light, dark;
 }
 
+@plugin "daisyui/theme" {
+  name: "light";
+  --color-primary: oklch(65.69% 0.192 29.53);
+  --color-primary-content: oklch(100% 0 0);
+  --radius-btn: 9999px;
+  --border-btn: 0px;
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  --color-primary: oklch(65.69% 0.192 29.53);
+  --color-primary-content: oklch(100% 0 0);
+  --radius-btn: 9999px;
+  --border-btn: 0px;
+}
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

@@ -43,40 +43,54 @@ export function CreateFormModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <dialog id="create_form_modal" className="modal modal-open">
-            <div className="modal-box">
-                <h3 className="font-bold text-lg">Create New Form</h3>
-                <p className="py-2 text-sm text-base-content/70">
-                    In workspace: <span className="font-semibold">{currentWorkspace?.name}</span>
+        <dialog className="modal modal-open">
+            <div className="modal-box max-w-lg">
+                <form method="dialog">
+                    <button 
+                        onClick={onClose} 
+                        className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4"
+                        disabled={isSubmitting}
+                    >
+                        ✕
+                    </button>
+                </form>
+                
+                <h3 className="text-2xl font-bold mb-1">Create New Form</h3>
+                <p className="text-sm text-base-content/60 mb-6">
+                    In <span className="font-semibold">{currentWorkspace?.name}</span>
                 </p>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text">Form Name</span>
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="e.g., Contact Form"
-                            className="input input-bordered w-full"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={isSubmitting}
-                            autoFocus
-                            required
-                        />
-                    </div>
 
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text">Description (Optional)</span>
-                        </label>
-                        <textarea
-                            className="textarea textarea-bordered h-24"
-                            placeholder="Brief description of your form..."
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            disabled={isSubmitting}
-                        ></textarea>
+                <form onSubmit={handleSubmit}>
+                    <div className="space-y-5">
+                        <div className="form-control w-full">
+                            <label className="label pb-1">
+                                <span className="label-text font-medium">Form Name</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Enter form name"
+                                className="input input-ghost w-full focus:bg-base-200"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={isSubmitting}
+                                autoFocus
+                                required
+                            />
+                        </div>
+
+                        <div className="form-control w-full">
+                            <div className="flex items-baseline justify-between mb-1">
+                                <span className="label-text font-medium">Description</span>
+                                <span className="text-xs text-base-content/50">Optional</span>
+                            </div>
+                            <textarea
+                                className="textarea textarea-ghost min-h-[100px] focus:bg-base-200 resize-none w-full"
+                                placeholder="Add a brief description..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                disabled={isSubmitting}
+                            ></textarea>
+                        </div>
                     </div>
 
                     <div className="modal-action">
@@ -93,7 +107,14 @@ export function CreateFormModal({ onClose }: { onClose: () => void }) {
                             className="btn btn-primary"
                             disabled={isSubmitting || !name.trim()}
                         >
-                            {isSubmitting ? "Creating..." : "Create Form"}
+                            {isSubmitting ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    Creating
+                                </>
+                            ) : (
+                                "Create Form"
+                            )}
                         </button>
                     </div>
                 </form>

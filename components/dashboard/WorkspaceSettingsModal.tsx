@@ -79,25 +79,38 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
 
     return (
         <dialog className="modal modal-open">
-            <div className="modal-box max-w-md">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-base-200">
-                        <FiSettings className="w-5 h-5" />
+            <div className="modal-box max-w-lg">
+                <form method="dialog">
+                    <button 
+                        onClick={onClose} 
+                        className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4"
+                        disabled={isSubmitting || isDeleting}
+                    >
+                        ✕
+                    </button>
+                </form>
+                
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                        <FiSettings className="w-5 h-5 text-primary" />
                     </div>
-                    <h3 className="font-bold text-lg">Workspace Settings</h3>
+                    <div>
+                        <h3 className="text-2xl font-bold">Workspace Settings</h3>
+                        <p className="text-sm text-base-content/60">Manage your workspace</p>
+                    </div>
                 </div>
 
                 {!showDeleteConfirm ? (
                     <>
-                        <form onSubmit={handleSave} className="flex flex-col gap-4">
-                            <div className="form-control w-full">
+                        <form onSubmit={handleSave}>
+                            <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">Workspace Name</span>
+                                    <span className="label-text font-medium">Workspace Name</span>
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="My Workspace"
-                                    className="input input-bordered w-full"
+                                    placeholder="Enter workspace name"
+                                    className="input input-ghost w-full focus:bg-base-200"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     disabled={isSubmitting}
@@ -107,11 +120,11 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                             </div>
 
                             {isDefault && (
-                                <div className="alert alert-info">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                                <div className="alert alert-info mt-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                    <span className="text-sm">This is your default workspace.</span>
+                                    <span className="text-sm">This is your default workspace</span>
                                 </div>
                             )}
 
@@ -132,7 +145,7 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                                     {isSubmitting ? (
                                         <>
                                             <span className="loading loading-spinner loading-sm"></span>
-                                            Saving...
+                                            Saving
                                         </>
                                     ) : (
                                         "Save Changes"
@@ -143,14 +156,21 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
 
                         {/* Danger Zone */}
                         {canDelete && (
-                            <div className="mt-6 pt-6 border-t border-base-200">
-                                <h4 className="font-semibold text-error mb-2">Danger Zone</h4>
-                                <p className="text-sm text-base-content/60 mb-4">
-                                    Deleting a workspace will permanently remove all forms and submissions within it.
-                                </p>
+                            <div className="mt-8 pt-6 border-t border-error/20">
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-error/10">
+                                        <FiTrash2 className="w-5 h-5 text-error" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-error mb-1">Danger Zone</h4>
+                                        <p className="text-sm text-base-content/60">
+                                            Permanently delete this workspace and all its forms
+                                        </p>
+                                    </div>
+                                </div>
                                 <button
                                     type="button"
-                                    className="btn btn-error btn-outline btn-sm"
+                                    className="btn btn-error btn-sm"
                                     onClick={() => setShowDeleteConfirm(true)}
                                 >
                                     <FiTrash2 className="w-4 h-4" />
@@ -160,21 +180,21 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                         )}
                     </>
                 ) : (
-                    <div className="flex flex-col gap-4">
+                    <form>
                         <div className="alert alert-error">
                             <FiTrash2 className="w-6 h-6" />
                             <div>
-                                <h4 className="font-bold">Delete Workspace</h4>
+                                <h4 className="font-bold">Delete Workspace?</h4>
                                 <p className="text-sm">
                                     This action cannot be undone. All forms and submissions will be permanently deleted.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="form-control w-full">
+                        <div className="form-control mt-4">
                             <label className="label">
-                                <span className="label-text">
-                                    Type <strong>{currentWorkspace.name}</strong> to confirm
+                                <span className="label-text font-medium">
+                                    Type <strong className="text-error">{currentWorkspace.name}</strong> to confirm
                                 </span>
                             </label>
                             <input
@@ -184,6 +204,7 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                                 value={deleteConfirmText}
                                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                                 disabled={isDeleting}
+                                autoFocus
                             />
                         </div>
 
@@ -208,14 +229,17 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                                 {isDeleting ? (
                                     <>
                                         <span className="loading loading-spinner loading-sm"></span>
-                                        Deleting...
+                                        Deleting
                                     </>
                                 ) : (
-                                    "Delete Workspace"
+                                    <>
+                                        <FiTrash2 className="w-4 h-4" />
+                                        Delete Workspace
+                                    </>
                                 )}
                             </button>
                         </div>
-                    </div>
+                    </form>
                 )}
             </div>
             <form method="dialog" className="modal-backdrop">
