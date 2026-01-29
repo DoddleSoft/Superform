@@ -105,14 +105,47 @@ export const formElementWithIdSchema = z.discriminatedUnion("type", [
     }),
 ]);
 
+// Section schema for AI to understand the section structure
+export const sectionSchema = z.object({
+    id: z.string().optional().describe("Optional section ID. Will be generated if not provided."),
+    title: z.string().describe("The title of the section displayed at the top"),
+    description: z.string().optional().describe("Optional description shown below the title"),
+    elements: z.array(formElementSchema).describe("Array of form elements in this section"),
+});
+
+export const sectionWithIdSchema = z.object({
+    id: z.string().describe("The unique identifier of the existing section"),
+    title: z.string().describe("The title of the section displayed at the top"),
+    description: z.string().optional().describe("Optional description shown below the title"),
+    elements: z.array(formElementWithIdSchema).describe("Array of form elements in this section"),
+});
+
 export const formElementsArraySchema = z.array(formElementSchema).describe(
     "Array of form elements to add to the form. Each element will be added in order."
 );
+
+// Schema for adding elements to a specific section
+export const addElementsToSectionSchema = z.object({
+    sectionId: z.string().describe("The ID of the section to add elements to"),
+    elements: formElementsArraySchema,
+    insertAfterFieldId: z.string().optional().describe("Optional: ID of the field after which to insert the new fields. If not provided, fields are added at the end of the section."),
+});
+
+// Schema for creating a new section with elements
+export const createSectionSchema = z.object({
+    section: sectionSchema.describe("The section to create with its elements"),
+    insertAfterSectionId: z.string().optional().describe("Optional: ID of the section after which to insert. If not provided, section is added at the end."),
+});
 
 // Wrapper schema for OpenAI which requires object type at root
 export const generateFormSchema = z.object({
     elements: formElementsArraySchema,
     insertAfterFieldId: z.string().optional().describe("Optional: ID of the field after which to insert the new fields. If not provided, fields are added at the end."),
+});
+
+// Schema for generating a complete form with sections
+export const generateFormWithSectionsSchema = z.object({
+    sections: z.array(sectionSchema).describe("Array of sections, each containing form elements. Each section will be displayed as a full-screen page."),
 });
 
 // Schema for deleting fields
@@ -136,20 +169,33 @@ export const updateFieldSchema = z.object({
     }),
 });
 
-// Schema for replacing the entire form
+// Schema for replacing the entire form with sections
 export const replaceFormSchema = z.object({
-    elements: z.array(formElementWithIdSchema).describe("The complete new form structure. All existing fields will be replaced with this."),
+    sections: z.array(sectionWithIdSchema).describe("The complete new form structure with sections. All existing sections will be replaced with this."),
 });
 
-// Schema for reordering fields
+// Schema for reordering fields within a section
 export const reorderFieldsSchema = z.object({
-    fieldIds: z.array(z.string()).describe("Array of field IDs in the new desired order. Must include all existing field IDs."),
+    sectionId: z.string().describe("The ID of the section containing the fields to reorder"),
+    fieldIds: z.array(z.string()).describe("Array of field IDs in the new desired order. Must include all field IDs in the section."),
 });
 
+// Schema for reordering sections
+export const reorderSectionsSchema = z.object({
+    sectionIds: z.array(z.string()).describe("Array of section IDs in the new desired order. Must include all section IDs."),
+});
+
+// Type exports
 export type GeneratedFormElement = z.infer<typeof formElementSchema>;
 export type GeneratedFormElementWithId = z.infer<typeof formElementWithIdSchema>;
+export type GeneratedSection = z.infer<typeof sectionSchema>;
+export type GeneratedSectionWithId = z.infer<typeof sectionWithIdSchema>;
 export type GenerateFormInput = z.infer<typeof generateFormSchema>;
+export type GenerateFormWithSectionsInput = z.infer<typeof generateFormWithSectionsSchema>;
 export type DeleteFieldsInput = z.infer<typeof deleteFieldsSchema>;
 export type UpdateFieldInput = z.infer<typeof updateFieldSchema>;
 export type ReplaceFormInput = z.infer<typeof replaceFormSchema>;
 export type ReorderFieldsInput = z.infer<typeof reorderFieldsSchema>;
+export type ReorderSectionsInput = z.infer<typeof reorderSectionsSchema>;
+export type AddElementsToSectionInput = z.infer<typeof addElementsToSectionSchema>;
+export type CreateSectionInput = z.infer<typeof createSectionSchema>;

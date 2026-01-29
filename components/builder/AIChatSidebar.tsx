@@ -74,15 +74,16 @@ export function AIChatSidebar() {
                     updates: part.input.updates,
                 });
             }
-            if (part.type === "tool-replaceForm" && part.input?.elements) {
+            if (part.type === "tool-replaceForm" && part.input?.sections) {
                 actions.push({
                     type: "replaceForm",
-                    elements: part.input.elements,
+                    sections: part.input.sections,
                 });
             }
             if (part.type === "tool-reorderFields" && part.input?.fieldIds) {
                 actions.push({
                     type: "reorderFields",
+                    sectionId: part.input.sectionId,
                     fieldIds: part.input.fieldIds,
                 });
             }
@@ -101,7 +102,7 @@ export function AIChatSidebar() {
                 case "updateField":
                     return `Update field`;
                 case "replaceForm":
-                    return `Replace with ${action.elements.length} field(s)`;
+                    return `Replace with ${action.sections.length} section(s)`;
                 case "reorderFields":
                     return `Reorder fields`;
                 default:
@@ -278,23 +279,21 @@ export function AIChatSidebar() {
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center gap-1 text-xs text-info">
                                                                     <FiList className="w-3 h-3" />
-                                                                    <span>Replacing form with:</span>
+                                                                    <span>Replacing form with {action.sections?.length || 0} section(s)</span>
                                                                 </div>
-                                                                {action.elements
-                                                                    .filter((el) => el?.extraAttributes?.label)
-                                                                    .map((el, i) => (
-                                                                        <div
-                                                                            key={i}
-                                                                            className="flex items-center gap-2 text-xs bg-info/10 px-2 py-1 rounded"
-                                                                        >
-                                                                            <span className="badge badge-xs badge-outline badge-info">
-                                                                                {el.type}
-                                                                            </span>
-                                                                            <span className="truncate">
-                                                                                {el.extraAttributes.label}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
+                                                                {action.sections?.map((section: any, i: number) => (
+                                                                    <div
+                                                                        key={i}
+                                                                        className="flex items-center gap-2 text-xs bg-info/10 px-2 py-1 rounded"
+                                                                    >
+                                                                        <span className="badge badge-xs badge-outline badge-info">
+                                                                            Section
+                                                                        </span>
+                                                                        <span className="truncate">
+                                                                            {section.title} ({section.elements?.length || 0} elements)
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
 

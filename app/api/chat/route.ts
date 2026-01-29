@@ -146,17 +146,17 @@ export async function POST(req: Request) {
                 },
             }),
             replaceForm: tool({
-                description: `Replace the entire form with a new structure. Use this ONLY when the user wants to completely rebuild the entire form from scratch. All existing fields will be removed and replaced with the new fields. For replacing just one or a few fields, use deleteFields + addFields instead.`,
+                description: `Replace the entire form with a new structure. Use this ONLY when the user wants to completely rebuild the entire form from scratch. All existing sections and fields will be removed and replaced with the new sections. For replacing just one or a few fields, use deleteFields + addFields instead.`,
                 inputSchema: replaceFormSchema,
                 execute: async (input) => {
-                    return { success: true, action: "replaceForm", count: input.elements.length };
+                    return { success: true, action: "replaceForm", count: input.sections.length };
                 },
             }),
             reorderFields: tool({
-                description: `Reorder the fields in the form. Provide ALL field IDs in the new desired order. The array must contain every existing field ID exactly once.`,
+                description: `Reorder the fields within a specific section. Provide the section ID and ALL field IDs in the new desired order. The array must contain every field ID in that section exactly once.`,
                 inputSchema: reorderFieldsSchema,
                 execute: async (input) => {
-                    return { success: true, action: "reorderFields", count: input.fieldIds.length };
+                    return { success: true, action: "reorderFields", sectionId: input.sectionId, count: input.fieldIds.length };
                 },
             }),
         },

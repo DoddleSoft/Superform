@@ -20,22 +20,23 @@ import {
     ChatSession,
 } from "@/actions/chat";
 import { useFormBuilder } from "./FormBuilderContext";
-import { FormElementType, FormElementInstance } from "@/types/form-builder";
+import { FormElementType, FormElementInstance, FormSection, createSection } from "@/types/form-builder";
 import {
     GeneratedFormElement,
     DeleteFieldsInput,
     UpdateFieldInput,
     ReplaceFormInput,
     ReorderFieldsInput,
+    GeneratedSectionWithId,
 } from "@/lib/formElementSchema";
 
 // Tool action types
 export type FormToolAction =
-    | { type: "addFields"; elements: GeneratedFormElement[]; insertAfterFieldId?: string }
+    | { type: "addFields"; elements: GeneratedFormElement[]; insertAfterFieldId?: string; sectionId?: string }
     | { type: "deleteFields"; fieldIds: string[] }
     | { type: "updateField"; fieldId: string; updates: UpdateFieldInput["updates"] }
-    | { type: "replaceForm"; elements: ReplaceFormInput["elements"] }
-    | { type: "reorderFields"; fieldIds: string[] };
+    | { type: "replaceForm"; sections: GeneratedSectionWithId[] }
+    | { type: "reorderFields"; sectionId: string; fieldIds: string[] };
 
 interface AIChatContextType {
     // Sidebar visibility
@@ -59,7 +60,7 @@ interface AIChatContextType {
 
     // Form operations
     applyGeneratedForm: (elements: GeneratedFormElement[]) => void;
-    applyFormAction: (action: FormToolAction, existingElements?: FormElementInstance[]) => FormElementInstance[] | undefined;
+    applyFormAction: (action: FormToolAction, existingSections?: FormSection[]) => FormSection[] | undefined;
     applyMultipleActions: (actions: FormToolAction[]) => void;
     
     // Applied state
@@ -89,7 +90,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
     const [isSessionReady, setIsSessionReady] = useState(false);
     const [appliedMessageIds, setAppliedMessageIds] = useState<Set<string>>(new Set());
 
-    const { setElements, elements: currentElements } = useFormBuilder();
+    const { setSections, sections: currentSections, currentSectionId } = useFormBuilder();
 
     // Initialize chat session
     useEffect(() => {
@@ -109,11 +110,11 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         initSession();
     }, [formId]);
 
-    // Create a ref to hold the current elements for use in the fetch function
-    const currentElementsRef = useRef(currentElements);
+    // Create a ref to hold the current sections for use in the fetch function
+    const currentSectionsRef = useRef(currentSections);
     useEffect(() => {
-        currentElementsRef.current = currentElements;
-    }, [currentElements]);
+        currentSectionsRef.current = currentSections;
+    }, [currentSections]);
 
     // Create a custom transport that includes the current form state
     const transport = useRef(
@@ -126,10 +127,15 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 const enhancedBody = {
                     ...originalBody,
                     formId,
-                    currentFormState: currentElementsRef.current.map((el) => ({
-                        id: el.id,
-                        type: el.type,
-                        extraAttributes: el.extraAttributes,
+                    currentFormState: currentSectionsRef.current.map((section) => ({
+                        id: section.id,
+                        title: section.title,
+                        description: section.description,
+                        elements: section.elements.map((el) => ({
+                            id: el.id,
+                            type: el.type,
+                            extraAttributes: el.extraAttributes,
+                        })),
                     })),
                 };
                 return fetch(url, {
@@ -260,7 +266,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         }
     }, [formId, setMessages]);
 
-    // Apply generated form elements to canvas
+    // Apply generated form elements to canvas (add to current section)
     const applyGeneratedForm = useCallback(
         (elements: GeneratedFormElement[]) => {
             const newElements: FormElementInstance[] = elements.map((el) => ({
@@ -269,17 +275,44 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 extraAttributes: el.extraAttributes,
             }));
 
-            // Add to existing elements
-            setElements([...currentElements, ...newElements]);
+            // Add to current section (or first section if no current)
+            const targetSectionId = currentSectionId ?? currentSections[0]?.id;
+            if (!targetSectionId) {
+                // Create a default section if none exists
+                const newSection = createSection(crypto.randomUUID(), "Section 1");
+                newSection.elements = newElements;
+                setSections([newSection]);
+                return;
+            }
+
+            // Add elements to the target section
+            const updatedSections = currentSections.map((section) => {
+                if (section.id === targetSectionId) {
+                    return {
+                        ...section,
+                        elements: [...section.elements, ...newElements],
+                    };
+                }
+                return section;
+            });
+            setSections(updatedSections);
         },
-        [currentElements, setElements]
+        [currentSections, currentSectionId, setSections]
+    );
+
+    // Helper to find which section an element belongs to
+    const findElementSection = useCallback(
+        (elementId: string, sections: FormSection[]): FormSection | undefined => {
+            return sections.find((s) => s.elements.some((el) => el.id === elementId));
+        },
+        []
     );
 
     // Apply any form action (add, delete, update, replace, reorder)
     const applyFormAction = useCallback(
-        (action: FormToolAction, existingElements?: FormElementInstance[]) => {
-            // Use provided elements or current elements
-            const workingElements = existingElements || currentElements;
+        (action: FormToolAction, existingSections?: FormSection[]): FormSection[] | undefined => {
+            // Use provided sections or current sections
+            const workingSections = existingSections || currentSections;
             
             switch (action.type) {
                 case "addFields": {
@@ -289,93 +322,145 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         extraAttributes: el.extraAttributes,
                     }));
                     
-                    // If insertAfterFieldId is specified, insert at that position
-                    if (action.insertAfterFieldId) {
-                        const insertIndex = workingElements.findIndex(
-                            (el) => el.id === action.insertAfterFieldId
-                        );
-                        if (insertIndex !== -1) {
-                            const before = workingElements.slice(0, insertIndex + 1);
-                            const after = workingElements.slice(insertIndex + 1);
-                            const result = [...before, ...newElements, ...after];
-                            if (!existingElements) setElements(result);
-                            return result;
-                        }
+                    // Determine target section
+                    let targetSectionId = action.sectionId;
+                    
+                    // If insertAfterFieldId is specified, find its section
+                    if (action.insertAfterFieldId && !targetSectionId) {
+                        const section = findElementSection(action.insertAfterFieldId, workingSections);
+                        targetSectionId = section?.id;
                     }
-                    // Default: append to end
-                    const result = [...workingElements, ...newElements];
-                    if (!existingElements) setElements(result);
+                    
+                    // Default to current section or first section
+                    if (!targetSectionId) {
+                        targetSectionId = currentSectionId ?? workingSections[0]?.id;
+                    }
+                    
+                    if (!targetSectionId) {
+                        // No sections, create one
+                        const newSection = createSection(crypto.randomUUID(), "Section 1");
+                        newSection.elements = newElements;
+                        const result = [newSection];
+                        if (!existingSections) setSections(result);
+                        return result;
+                    }
+                    
+                    const result = workingSections.map((section) => {
+                        if (section.id === targetSectionId) {
+                            // If insertAfterFieldId is specified, insert at that position
+                            if (action.insertAfterFieldId) {
+                                const insertIndex = section.elements.findIndex(
+                                    (el) => el.id === action.insertAfterFieldId
+                                );
+                                if (insertIndex !== -1) {
+                                    const before = section.elements.slice(0, insertIndex + 1);
+                                    const after = section.elements.slice(insertIndex + 1);
+                                    return {
+                                        ...section,
+                                        elements: [...before, ...newElements, ...after],
+                                    };
+                                }
+                            }
+                            // Default: append to end
+                            return {
+                                ...section,
+                                elements: [...section.elements, ...newElements],
+                            };
+                        }
+                        return section;
+                    });
+                    if (!existingSections) setSections(result);
                     return result;
                 }
                 case "deleteFields": {
-                    const filteredElements = workingElements.filter(
-                        (el) => !action.fieldIds.includes(el.id)
-                    );
-                    if (!existingElements) setElements(filteredElements);
-                    return filteredElements;
+                    const result = workingSections.map((section) => ({
+                        ...section,
+                        elements: section.elements.filter(
+                            (el) => !action.fieldIds.includes(el.id)
+                        ),
+                    }));
+                    if (!existingSections) setSections(result);
+                    return result;
                 }
                 case "updateField": {
-                    const updatedElements = workingElements.map((el) => {
-                        if (el.id === action.fieldId) {
-                            return {
-                                ...el,
-                                type: action.updates.type
-                                    ? (action.updates.type as FormElementType)
-                                    : el.type,
-                                extraAttributes: {
-                                    ...el.extraAttributes,
-                                    ...action.updates.extraAttributes,
-                                },
-                            };
-                        }
-                        return el;
-                    });
-                    if (!existingElements) setElements(updatedElements);
-                    return updatedElements;
+                    const result = workingSections.map((section) => ({
+                        ...section,
+                        elements: section.elements.map((el) => {
+                            if (el.id === action.fieldId) {
+                                return {
+                                    ...el,
+                                    type: action.updates.type
+                                        ? (action.updates.type as FormElementType)
+                                        : el.type,
+                                    extraAttributes: {
+                                        ...el.extraAttributes,
+                                        ...action.updates.extraAttributes,
+                                    },
+                                };
+                            }
+                            return el;
+                        }),
+                    }));
+                    if (!existingSections) setSections(result);
+                    return result;
                 }
                 case "replaceForm": {
-                    const newElements: FormElementInstance[] = action.elements.map((el) => ({
-                        id: el.id || crypto.randomUUID(),
-                        type: el.type as FormElementType,
-                        extraAttributes: el.extraAttributes,
+                    const newSections: FormSection[] = action.sections.map((section) => ({
+                        id: section.id || crypto.randomUUID(),
+                        title: section.title || "Untitled Section",
+                        description: section.description,
+                        elements: section.elements.map((el) => ({
+                            id: el.id || crypto.randomUUID(),
+                            type: el.type as FormElementType,
+                            extraAttributes: el.extraAttributes,
+                        })),
                     }));
-                    if (!existingElements) setElements(newElements);
-                    return newElements;
+                    if (!existingSections) setSections(newSections);
+                    return newSections;
                 }
                 case "reorderFields": {
-                    const reorderedElements: FormElementInstance[] = [];
-                    for (const fieldId of action.fieldIds) {
-                        const element = workingElements.find((el) => el.id === fieldId);
-                        if (element) {
-                            reorderedElements.push(element);
+                    const result = workingSections.map((section) => {
+                        if (section.id === action.sectionId) {
+                            const reorderedElements: FormElementInstance[] = [];
+                            for (const fieldId of action.fieldIds) {
+                                const element = section.elements.find((el) => el.id === fieldId);
+                                if (element) {
+                                    reorderedElements.push(element);
+                                }
+                            }
+                            // Add any elements not in the reorder list at the end
+                            for (const el of section.elements) {
+                                if (!action.fieldIds.includes(el.id)) {
+                                    reorderedElements.push(el);
+                                }
+                            }
+                            return {
+                                ...section,
+                                elements: reorderedElements,
+                            };
                         }
-                    }
-                    // Add any elements not in the reorder list at the end
-                    for (const el of workingElements) {
-                        if (!action.fieldIds.includes(el.id)) {
-                            reorderedElements.push(el);
-                        }
-                    }
-                    if (!existingElements) setElements(reorderedElements);
-                    return reorderedElements;
+                        return section;
+                    });
+                    if (!existingSections) setSections(result);
+                    return result;
                 }
                 default:
-                    return workingElements;
+                    return workingSections;
             }
         },
-        [currentElements, setElements]
+        [currentSections, currentSectionId, setSections, findElementSection]
     );
 
     // Apply multiple actions in sequence
     const applyMultipleActions = useCallback(
         (actions: FormToolAction[]) => {
-            let elements = currentElements;
+            let sections = currentSections;
             for (const action of actions) {
-                elements = applyFormAction(action, elements) || elements;
+                sections = applyFormAction(action, sections) || sections;
             }
-            setElements(elements);
+            setSections(sections);
         },
-        [currentElements, applyFormAction, setElements]
+        [currentSections, applyFormAction, setSections]
     );
 
     // Mark a message's actions as applied (persists to database)

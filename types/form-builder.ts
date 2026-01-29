@@ -27,6 +27,27 @@ export type FormElementHelper = {
     label: string;
 };
 
+// Section represents a full-screen page in Typeform-like experience
+export interface FormSection {
+    id: string;
+    title: string;
+    description?: string;
+    elements: FormElementInstance[];
+}
+
+// Form content is now an array of sections
+export type FormContent = FormSection[];
+
+// Helper to create a new section with defaults
+export function createSection(id: string, title?: string): FormSection {
+    return {
+        id,
+        title: title || "Untitled Section",
+        description: "",
+        elements: [],
+    };
+}
+
 // Form types for dashboard
 export interface Form {
     id: string;
@@ -34,7 +55,7 @@ export interface Form {
     workspace_id: string;
     name: string;
     description: string | null;
-    content: FormElementInstance[];
+    content: FormContent; // Changed from FormElementInstance[] to FormContent (Section[])
     published: boolean;
     share_url: string | null;
     created_at: string;

@@ -131,7 +131,7 @@ type propertiesFormSchemaType = z.infer<typeof propertiesSchema>;
 
 function PropertiesComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { updateElement } = useFormBuilder();
+    const { updateElementById } = useFormBuilder();
 
     const defaults = elementInstance.extraAttributes || extraAttributes;
 
@@ -151,7 +151,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
 
     function applyChanges(values: propertiesFormSchemaType) {
         const { label, helperText, required } = values;
-        updateElement(elementInstance.id, {
+        updateElementById(elementInstance.id, {
             ...elementInstance,
             extraAttributes: {
                 label,

@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { saveFormContent } from "@/actions/form";
-import { FormElementInstance } from "@/types/form-builder";
+import { FormSection } from "@/types/form-builder";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 interface UseAutoSaveOptions {
     formId: string | null;
-    elements: FormElementInstance[];
+    elements: FormSection[]; // Now expects sections array
     debounceMs?: number;
 }
 

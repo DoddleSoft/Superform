@@ -7,7 +7,12 @@ import { FormElements } from "./FormElements";
 import { motion } from "@/lib/animations";
 
 export function Sidebar() {
-    const { addElement, elements } = useFormBuilder();
+    const { addElement, sections, currentSectionId } = useFormBuilder();
+
+    // Get the section to add to - use current section or first section as fallback
+    const targetSectionId = currentSectionId ?? sections[0]?.id ?? "";
+    const targetSection = sections.find(s => s.id === targetSectionId);
+    const currentElementCount = targetSection?.elements.length ?? 0;
 
     const elementTypes = [
         FormElementType.TEXT_FIELD,
@@ -36,8 +41,9 @@ export function Sidebar() {
                             type={type}
                             label={FormElements[type].label}
                             onAdd={() => {
+                                if (!targetSectionId) return;
                                 const newElement = FormElements[type].construct(crypto.randomUUID());
-                                addElement(elements.length, newElement);
+                                addElement(targetSectionId, currentElementCount, newElement);
                             }}
                         />
                     </motion.div>

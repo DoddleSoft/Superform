@@ -2,16 +2,21 @@
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { FormElementInstance, FormElementType } from "@/types/form-builder";
-import React from "react";
+import React, { useMemo } from "react";
 import { FormElements } from "./FormElements";
 
 export function ResultsView({ submissions }: { submissions: any[] }) {
-    const { elements } = useFormBuilder();
+    const { sections } = useFormBuilder();
+
+    // Flatten all elements from all sections
+    const allElements = useMemo(() => {
+        return sections.flatMap(section => section.elements);
+    }, [sections]);
 
     // Map columns from form elements
     const columns: { id: string; label: string; type: FormElementType }[] = [];
 
-    elements.forEach((element) => {
+    allElements.forEach((element) => {
         switch (element.type) {
             case FormElementType.TEXT_FIELD:
             case FormElementType.NUMBER:

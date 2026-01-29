@@ -14,7 +14,7 @@ import { LeftPanel } from "./LeftPanel";
 import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
-import { FormElementInstance, FormElementType } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormSection, createSection } from "@/types/form-builder";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
 import { BuilderHeader } from "./BuilderHeader";
@@ -25,24 +25,42 @@ import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
 
 export function BuilderMain({ form, submissions }: { form: any, submissions: any[] }) {
-    const { elements, addElement, setElements, setFormMetadata, formId } = useFormBuilder();
+    const { sections, addElement, setSections, setFormMetadata, formId, addSection, moveElement } = useFormBuilder();
     const [activeSidebarElement, setActiveSidebarElement] = useState<FormElementType | null>(null);
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
+    const [activeElementSectionId, setActiveElementSectionId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"build" | "results">("build");
 
-    // Auto-save hook
+    // Auto-save hook - now saves sections instead of elements
     const { saveStatus, lastSavedAt, error: saveError } = useAutoSave({
         formId,
-        elements,
+        elements: sections, // Now sections array
         debounceMs: 1500,
     });
 
     useEffect(() => {
         if (form) {
-            setElements(form.content || []);
+            // Handle both old format (flat array) and new format (sections)
+            const content = form.content || [];
+            if (Array.isArray(content) && content.length > 0) {
+                // Check if it's the new section format
+                if (content[0]?.elements !== undefined) {
+                    // New section format
+                    setSections(content);
+                } else {
+                    // Old flat array format - migrate to section format
+                    const defaultSection = createSection(crypto.randomUUID(), "Section 1");
+                    defaultSection.elements = content;
+                    setSections([defaultSection]);
+                }
+            } else {
+                // Empty content - create a default section
+                const defaultSection = createSection(crypto.randomUUID(), "Section 1");
+                setSections([defaultSection]);
+            }
             setFormMetadata(form.id, form.published, form.share_url);
         }
-    }, [form, setElements, setFormMetadata]);
+    }, [form, setSections, setFormMetadata]);
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -68,6 +86,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: any
         // If dragging canvas element
         if (event.active.data.current?.isDesignerElement) {
             setActiveCanvasElement(event.active.data.current.element);
+            setActiveElementSectionId(event.active.data.current.sectionId);
             return;
         }
     }
@@ -76,44 +95,83 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: any
         const { active, over } = event;
         setActiveSidebarElement(null);
         setActiveCanvasElement(null);
+        setActiveElementSectionId(null);
 
         if (!over) return;
 
-        // Drop Sidebar Element -> Canvas
-        if (active.data.current?.isDesignerBtnElement && over.id === "canvas-droppable") {
+        const overId = String(over.id);
+        
+        // Drop Sidebar Element -> Section Drop Area
+        if (active.data.current?.isDesignerBtnElement && over.data.current?.isDesignerDropArea) {
             const type = active.data.current.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
-            addElement(elements.length, newElement);
+            const sectionId = over.data.current.sectionId;
+            
+            if (sectionId) {
+                const section = sections.find(s => s.id === sectionId);
+                addElement(sectionId, section?.elements.length || 0, newElement);
+            }
             return;
         }
 
-        // Drop Sidebar Element -> Over another Element (Sortable)
+        // Drop Sidebar Element -> Over another Element in a section
         if (active.data.current?.isDesignerBtnElement && over.data.current?.isDesignerElement) {
             const type = active.data.current.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
-
-            // Find index of over element
-            const overElementIndex = elements.findIndex(el => el.id === over.id);
-            if (overElementIndex === -1) {
-                addElement(elements.length, newElement);
-                return;
+            const sectionId = over.data.current.sectionId;
+            
+            if (sectionId) {
+                const section = sections.find(s => s.id === sectionId);
+                const overElementIndex = section?.elements.findIndex(el => el.id === over.id) ?? -1;
+                
+                if (overElementIndex !== -1) {
+                    addElement(sectionId, overElementIndex, newElement);
+                } else {
+                    addElement(sectionId, section?.elements.length || 0, newElement);
+                }
             }
-
-            // Insert at the new index
-            addElement(overElementIndex, newElement);
             return;
         }
 
-
-        // Reordering Canvas Elements
+        // Reordering Elements within/between sections
         if (active.data.current?.isDesignerElement && over.data.current?.isDesignerElement) {
             const activeId = active.id;
             const overId = over.id;
+            const fromSectionId = active.data.current.sectionId;
+            const toSectionId = over.data.current.sectionId;
 
-            if (activeId !== overId) {
-                const oldIndex = elements.findIndex((el) => el.id === activeId);
-                const newIndex = elements.findIndex((el) => el.id === overId);
-                setElements((prev) => arrayMove(prev, oldIndex, newIndex));
+            if (activeId !== overId || fromSectionId !== toSectionId) {
+                if (fromSectionId === toSectionId) {
+                    // Same section reorder
+                    setSections(prev => prev.map(section => {
+                        if (section.id === fromSectionId) {
+                            const oldIndex = section.elements.findIndex(el => el.id === activeId);
+                            const newIndex = section.elements.findIndex(el => el.id === overId);
+                            return {
+                                ...section,
+                                elements: arrayMove(section.elements, oldIndex, newIndex)
+                            };
+                        }
+                        return section;
+                    }));
+                } else {
+                    // Cross-section move
+                    const toSection = sections.find(s => s.id === toSectionId);
+                    const newIndex = toSection?.elements.findIndex(el => el.id === overId) ?? 0;
+                    moveElement(fromSectionId, toSectionId, String(activeId), newIndex);
+                }
+            }
+            return;
+        }
+
+        // Drop element onto section drop area (cross-section move)
+        if (active.data.current?.isDesignerElement && over.data.current?.isDesignerDropArea) {
+            const fromSectionId = active.data.current.sectionId;
+            const toSectionId = over.data.current.sectionId;
+            
+            if (fromSectionId !== toSectionId && toSectionId) {
+                const toSection = sections.find(s => s.id === toSectionId);
+                moveElement(fromSectionId, toSectionId, String(active.id), toSection?.elements.length || 0);
             }
         }
     }
