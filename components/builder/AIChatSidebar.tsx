@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAIChat, FormToolAction } from "@/context/AIChatContext";
-import { FiSend, FiX, FiTrash2, FiCheck, FiPlus, FiEdit2, FiList } from "react-icons/fi";
+import { FiSend, FiX, FiCheck, FiPlus, FiEdit2, FiList } from "react-icons/fi";
 import { BsStars } from "react-icons/bs";
 import { MdDeleteOutline } from "react-icons/md";
 import { GeneratedFormElement } from "@/lib/formElementSchema";
@@ -15,7 +15,6 @@ export function AIChatSidebar() {
         error,
         stop,
         isLoadingSession,
-        clearChat,
         applyGeneratedForm,
         applyMultipleActions,
         appliedMessageIds,
@@ -41,12 +40,6 @@ export function AIChatSidebar() {
         if (input.trim() && status === "ready") {
             sendMessage({ text: input });
             setInput("");
-        }
-    };
-
-    const handleClearChat = async () => {
-        if (confirm("Are you sure you want to clear the chat history?")) {
-            await clearChat();
         }
     };
 
@@ -137,21 +130,6 @@ export function AIChatSidebar() {
 
     return (
         <div className="h-full bg-base-100 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-base-200 bg-base-50/50 shrink-0">
-                <div className="flex items-center gap-2">
-                    <BsStars className="w-5 h-5 text-primary" />
-                    <h2 className="font-semibold">AI Form Builder</h2>
-                </div>
-                <button
-                    onClick={handleClearChat}
-                    className="btn btn-ghost btn-sm btn-square"
-                    title="Clear chat history"
-                >
-                    <FiTrash2 className="w-4 h-4" />
-                </button>
-            </div>
-
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {isLoadingSession ? (
