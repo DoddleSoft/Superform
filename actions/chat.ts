@@ -8,6 +8,7 @@ export interface ChatMessage {
     role: "user" | "assistant";
     content: string;
     toolInvocations?: any[];
+    actionsApplied: boolean;
     createdAt: Date;
 }
 
@@ -83,6 +84,7 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessage[]>
         role: msg.role as "user" | "assistant",
         content: msg.content,
         toolInvocations: msg.tool_invocations,
+        actionsApplied: msg.actions_applied ?? false,
         createdAt: new Date(msg.created_at),
     }));
 }
@@ -121,8 +123,27 @@ export async function saveChatMessage(
         role: data.role as "user" | "assistant",
         content: data.content,
         toolInvocations: data.tool_invocations,
+        actionsApplied: data.actions_applied ?? false,
         createdAt: new Date(data.created_at),
     };
+}
+
+export async function markActionsApplied(messageId: string): Promise<void> {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase
+        .from("ai_chat_messages")
+        .update({ actions_applied: true })
+        .eq("id", messageId);
+
+    if (error) {
+        // Silently ignore if column doesn't exist yet
+        if (error.code === "42703") {
+            console.warn("actions_applied column not found - run migration 003_add_actions_applied.sql");
+            return;
+        }
+        throw error;
+    }
 }
 
 export async function clearChatHistory(formId: string): Promise<void> {

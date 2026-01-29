@@ -43,7 +43,7 @@ export const selectFieldAttributesSchema = z.object({
     options: z.array(z.string()).min(1).describe("Array of option values for the dropdown"),
 });
 
-// Union schema for all form element types
+// Union schema for all form element types (without id - for new elements)
 export const formElementSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("TextField"),
@@ -71,6 +71,40 @@ export const formElementSchema = z.discriminatedUnion("type", [
     }),
 ]);
 
+// Form element with ID (for existing elements)
+export const formElementWithIdSchema = z.discriminatedUnion("type", [
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("TextField"),
+        extraAttributes: textFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Number"),
+        extraAttributes: numberFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("TextArea"),
+        extraAttributes: textAreaAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Date"),
+        extraAttributes: dateFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Checkbox"),
+        extraAttributes: checkboxFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Select"),
+        extraAttributes: selectFieldAttributesSchema,
+    }),
+]);
+
 export const formElementsArraySchema = z.array(formElementSchema).describe(
     "Array of form elements to add to the form. Each element will be added in order."
 );
@@ -78,7 +112,44 @@ export const formElementsArraySchema = z.array(formElementSchema).describe(
 // Wrapper schema for OpenAI which requires object type at root
 export const generateFormSchema = z.object({
     elements: formElementsArraySchema,
+    insertAfterFieldId: z.string().optional().describe("Optional: ID of the field after which to insert the new fields. If not provided, fields are added at the end."),
+});
+
+// Schema for deleting fields
+export const deleteFieldsSchema = z.object({
+    fieldIds: z.array(z.string()).describe("Array of field IDs to delete from the form"),
+});
+
+// Schema for updating a single field
+export const updateFieldSchema = z.object({
+    fieldId: z.string().describe("The ID of the field to update"),
+    updates: z.object({
+        type: z.enum(["TextField", "Number", "TextArea", "Date", "Checkbox", "Select"]).optional().describe("New field type (optional - only if changing the type)"),
+        extraAttributes: z.object({
+            label: z.string().optional(),
+            helperText: z.string().optional(),
+            required: z.boolean().optional(),
+            placeholder: z.string().optional(),
+            rows: z.number().min(1).max(20).optional(),
+            options: z.array(z.string()).optional(),
+        }).describe("Partial attributes to update - only include fields you want to change"),
+    }),
+});
+
+// Schema for replacing the entire form
+export const replaceFormSchema = z.object({
+    elements: z.array(formElementWithIdSchema).describe("The complete new form structure. All existing fields will be replaced with this."),
+});
+
+// Schema for reordering fields
+export const reorderFieldsSchema = z.object({
+    fieldIds: z.array(z.string()).describe("Array of field IDs in the new desired order. Must include all existing field IDs."),
 });
 
 export type GeneratedFormElement = z.infer<typeof formElementSchema>;
+export type GeneratedFormElementWithId = z.infer<typeof formElementWithIdSchema>;
 export type GenerateFormInput = z.infer<typeof generateFormSchema>;
+export type DeleteFieldsInput = z.infer<typeof deleteFieldsSchema>;
+export type UpdateFieldInput = z.infer<typeof updateFieldSchema>;
+export type ReplaceFormInput = z.infer<typeof replaceFormSchema>;
+export type ReorderFieldsInput = z.infer<typeof reorderFieldsSchema>;

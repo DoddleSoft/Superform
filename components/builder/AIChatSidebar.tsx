@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useAIChat } from "@/context/AIChatContext";
-import { FiSend, FiX, FiTrash2, FiCheck, FiLoader } from "react-icons/fi";
+import { useAIChat, FormToolAction } from "@/context/AIChatContext";
+import { FiSend, FiX, FiTrash2, FiCheck, FiPlus, FiEdit2, FiList } from "react-icons/fi";
 import { BsStars } from "react-icons/bs";
+import { MdDeleteOutline } from "react-icons/md";
 import { GeneratedFormElement } from "@/lib/formElementSchema";
 
 export function AIChatSidebar() {
@@ -18,10 +19,12 @@ export function AIChatSidebar() {
         isLoadingSession,
         clearChat,
         applyGeneratedForm,
+        applyMultipleActions,
+        appliedMessageIds,
+        markMessageApplied,
     } = useAIChat();
 
     const [input, setInput] = useState("");
-    const [appliedMessageIds, setAppliedMessageIds] = useState<Set<string>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,20 +54,88 @@ export function AIChatSidebar() {
         }
     };
 
-    // Extract generated elements from tool parts
-    // Tool calls come through with type "tool-generateForm"
-    // The input contains the generated form elements array
-    const extractGeneratedElements = (parts: any[]): GeneratedFormElement[] | null => {
+    // Extract ALL tool actions from parts (AI may call multiple tools)
+    const extractAllToolActions = (parts: any[]): FormToolAction[] => {
+        const actions: FormToolAction[] = [];
         for (const part of parts) {
-            // Check for tool-generateForm type
-            if (part.type === "tool-generateForm") {
-                // The input is now an object with 'elements' array (matching our schema)
-                if (part.input && Array.isArray(part.input.elements)) {
-                    return part.input.elements as GeneratedFormElement[];
-                }
+            if (part.type === "tool-addFields" && part.input?.elements) {
+                actions.push({
+                    type: "addFields",
+                    elements: part.input.elements,
+                    insertAfterFieldId: part.input.insertAfterFieldId,
+                });
+            }
+            if (part.type === "tool-deleteFields" && part.input?.fieldIds) {
+                actions.push({
+                    type: "deleteFields",
+                    fieldIds: part.input.fieldIds,
+                });
+            }
+            if (part.type === "tool-updateField" && part.input?.fieldId) {
+                actions.push({
+                    type: "updateField",
+                    fieldId: part.input.fieldId,
+                    updates: part.input.updates,
+                });
+            }
+            if (part.type === "tool-replaceForm" && part.input?.elements) {
+                actions.push({
+                    type: "replaceForm",
+                    elements: part.input.elements,
+                });
+            }
+            if (part.type === "tool-reorderFields" && part.input?.fieldIds) {
+                actions.push({
+                    type: "reorderFields",
+                    fieldIds: part.input.fieldIds,
+                });
             }
         }
-        return null;
+        return actions;
+    };
+
+    // Get human-readable description for all actions
+    const getActionsDescription = (actions: FormToolAction[]): string => {
+        return actions.map((action) => {
+            switch (action.type) {
+                case "addFields":
+                    return `Add ${action.elements.length} field(s)`;
+                case "deleteFields":
+                    return `Delete ${action.fieldIds.length} field(s)`;
+                case "updateField":
+                    return `Update field`;
+                case "replaceForm":
+                    return `Replace with ${action.elements.length} field(s)`;
+                case "reorderFields":
+                    return `Reorder fields`;
+                default:
+                    return "Unknown action";
+            }
+        }).join(", ");
+    };
+
+    // Get icon for action type
+    const getActionIcon = (action: FormToolAction) => {
+        switch (action.type) {
+            case "addFields":
+                return <FiPlus className="w-4 h-4" />;
+            case "deleteFields":
+                return <MdDeleteOutline className="w-4 h-4" />;
+            case "updateField":
+                return <FiEdit2 className="w-4 h-4" />;
+            case "replaceForm":
+                return <FiList className="w-4 h-4" />;
+            case "reorderFields":
+                return <FiList className="w-4 h-4" />;
+            default:
+                return <FiCheck className="w-4 h-4" />;
+        }
+    };
+
+    // Apply all actions in sequence
+    const handleApplyActions = async (actions: FormToolAction[], messageId: string) => {
+        applyMultipleActions(actions);
+        await markMessageApplied(messageId);
     };
 
     if (!isSidebarOpen) return null;
@@ -132,9 +203,9 @@ export function AIChatSidebar() {
                     </div>
                 ) : (
                     messages.map((message: any) => {
-                        const generatedElements = message.role === "assistant"
-                            ? extractGeneratedElements(message.parts || [])
-                            : null;
+                        const toolActions = message.role === "assistant"
+                            ? extractAllToolActions(message.parts || [])
+                            : [];
 
                         return (
                             <div
@@ -152,7 +223,7 @@ export function AIChatSidebar() {
                                 >
                                     {/* Render text parts */}
                                     {(message.parts || []).map((part: any, index: number) => {
-                                        if (part.type === "text") {
+                                        if (part.type === "text" && part.text?.trim()) {
                                             return (
                                                 <p key={index} className="whitespace-pre-wrap text-sm">
                                                     {part.text}
@@ -162,47 +233,112 @@ export function AIChatSidebar() {
                                         return null;
                                     })}
 
-                                    {/* Render generated form preview */}
-                                    {generatedElements && generatedElements.length > 0 && (
+                                    {/* Render tool actions preview */}
+                                    {toolActions.length > 0 && (
                                         <div className="mt-3 pt-3 border-t border-base-300">
                                             <div className="text-xs font-medium mb-2 opacity-70">
-                                                Generated {generatedElements.length} field(s):
+                                                {getActionsDescription(toolActions)}
                                             </div>
-                                            <div className="space-y-1 mb-3">
-                                                {generatedElements
-                                                    .filter((el) => el?.extraAttributes?.label)
-                                                    .map((el, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="flex items-center gap-2 text-xs bg-base-100/50 px-2 py-1 rounded"
-                                                        >
-                                                            <span className="badge badge-xs badge-outline">
-                                                                {el.type}
-                                                            </span>
-                                                            <span className="truncate">
-                                                                {el.extraAttributes.label}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                            
+                                            {/* Show preview for each action */}
+                                            <div className="space-y-2 mb-3">
+                                                {toolActions.map((action, actionIndex) => (
+                                                    <div key={actionIndex} className="space-y-1">
+                                                        {/* Add fields preview */}
+                                                        {action.type === "addFields" && (
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-1 text-xs text-success">
+                                                                    <FiPlus className="w-3 h-3" />
+                                                                    <span>Adding:</span>
+                                                                </div>
+                                                                {action.elements
+                                                                    .filter((el) => el?.extraAttributes?.label)
+                                                                    .map((el, i) => (
+                                                                        <div
+                                                                            key={i}
+                                                                            className="flex items-center gap-2 text-xs bg-success/10 px-2 py-1 rounded"
+                                                                        >
+                                                                            <span className="badge badge-xs badge-outline badge-success">
+                                                                                {el.type}
+                                                                            </span>
+                                                                            <span className="truncate">
+                                                                                {el.extraAttributes.label}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Delete fields preview */}
+                                                        {action.type === "deleteFields" && (
+                                                            <div className="text-xs text-error flex items-center gap-1">
+                                                                <MdDeleteOutline className="w-3 h-3" />
+                                                                <span>{action.fieldIds.length} field(s) will be removed</span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Update field preview */}
+                                                        {action.type === "updateField" && (
+                                                            <div className="text-xs bg-warning/10 px-2 py-1 rounded flex items-center gap-1">
+                                                                <FiEdit2 className="w-3 h-3" />
+                                                                <span>
+                                                                    Updating: {Object.keys(action.updates.extraAttributes || {}).join(", ")}
+                                                                    {action.updates.type && ` (type → ${action.updates.type})`}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Replace form preview */}
+                                                        {action.type === "replaceForm" && (
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-1 text-xs text-info">
+                                                                    <FiList className="w-3 h-3" />
+                                                                    <span>Replacing form with:</span>
+                                                                </div>
+                                                                {action.elements
+                                                                    .filter((el) => el?.extraAttributes?.label)
+                                                                    .map((el, i) => (
+                                                                        <div
+                                                                            key={i}
+                                                                            className="flex items-center gap-2 text-xs bg-info/10 px-2 py-1 rounded"
+                                                                        >
+                                                                            <span className="badge badge-xs badge-outline badge-info">
+                                                                                {el.type}
+                                                                            </span>
+                                                                            <span className="truncate">
+                                                                                {el.extraAttributes.label}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Reorder preview */}
+                                                        {action.type === "reorderFields" && (
+                                                            <div className="text-xs bg-base-100/50 px-2 py-1 rounded flex items-center gap-1">
+                                                                <FiList className="w-3 h-3" />
+                                                                <span>Reordering {action.fieldIds.length} field(s)</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
+
                                             {appliedMessageIds.has(message.id) ? (
                                                 <button
                                                     disabled
                                                     className="btn btn-success btn-sm w-full gap-2"
                                                 >
                                                     <FiCheck className="w-4 h-4" />
-                                                    Added to Form
+                                                    Applied
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => {
-                                                        applyGeneratedForm(generatedElements);
-                                                        setAppliedMessageIds((prev) => new Set(prev).add(message.id));
-                                                    }}
+                                                    onClick={() => handleApplyActions(toolActions, message.id)}
                                                     className="btn btn-primary btn-sm w-full gap-2"
                                                 >
                                                     <FiCheck className="w-4 h-4" />
-                                                    Add to Form
+                                                    Apply Changes
                                                 </button>
                                             )}
                                         </div>
