@@ -8,6 +8,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { FormElements } from "./FormElements";
 import { LuMousePointerClick } from "react-icons/lu";
+import { motion, AnimatePresence, elementVariants, scaleIn } from "@/lib/animations";
 
 export function Canvas() {
     const { elements, setSelectedElement } = useFormBuilder();
@@ -89,23 +90,32 @@ export function Canvas() {
                     }`}
                 onClick={(e) => e.stopPropagation()}
             >
-                {elements.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-base-content/30 border-2 border-dashed border-base-200 rounded-xl bg-base-50/50 hover:border-primary/50 transition-colors p-8 gap-4">
-                        <div className="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center">
-                            <LuMousePointerClick className="w-8 h-8 opacity-50" />
-                        </div>
-                        <div className="text-center">
-                            <p className="font-bold text-lg">Your form is empty</p>
-                            <p className="text-sm">Drag and drop elements from the sidebar to start building</p>
-                        </div>
-                    </div>
-                ) : (
-                    <SortableContext items={elements.map((el) => el.id)} strategy={verticalListSortingStrategy}>
-                        {elements.map((el) => (
-                            <SortableElement key={el.id} element={el} />
-                        ))}
-                    </SortableContext>
-                )}
+                <AnimatePresence mode="popLayout">
+                    {elements.length === 0 ? (
+                        <motion.div
+                            key="empty-state"
+                            variants={scaleIn}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="flex-1 flex flex-col items-center justify-center text-base-content/30 border-2 border-dashed border-base-200 rounded-xl bg-base-50/50 hover:border-primary/50 transition-colors p-8 gap-4"
+                        >
+                            <div className="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center">
+                                <LuMousePointerClick className="w-8 h-8 opacity-50" />
+                            </div>
+                            <div className="text-center">
+                                <p className="font-bold text-lg">Your form is empty</p>
+                                <p className="text-sm">Drag and drop elements from the sidebar to start building</p>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <SortableContext items={elements.map((el) => el.id)} strategy={verticalListSortingStrategy}>
+                            {elements.map((el) => (
+                                <SortableElement key={el.id} element={el} />
+                            ))}
+                        </SortableContext>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
@@ -150,12 +160,17 @@ function SortableElement({ element }: { element: FormElementInstance }) {
     const isSelected = selectedElement?.id === element.id;
 
     return (
-        <div
+        <motion.div
             ref={setNodeRef}
             style={style}
             {...attributes}
             {...listeners}
             data-designer-element
+            layout
+            variants={elementVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className={`p-6 rounded-xl border transition-all relative group bg-base-100 shadow-sm
                 ${isSelected
                     ? "border-primary shadow-md ring-1 ring-primary"
@@ -171,13 +186,20 @@ function SortableElement({ element }: { element: FormElementInstance }) {
             <div className="absolute inset-0 w-full h-full z-10" />
 
             {/* Hover Actions (could be added here later like duplicate/delete shortcuts) */}
-            {isSelected && (
-                <div className="absolute -top-3 -right-3 bg-primary text-primary-content text-xs px-2 py-1 rounded badge badge-primary shadow-sm z-20">
-                    Selected
-                </div>
-            )}
+            <AnimatePresence>
+                {isSelected && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, y: -5 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: -5 }}
+                        className="absolute -top-3 -right-3 bg-primary text-primary-content text-xs px-2 py-1 rounded badge badge-primary shadow-sm z-20"
+                    >
+                        Selected
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <DesignerComponent element={element} />
-        </div>
+        </motion.div>
     );
 }

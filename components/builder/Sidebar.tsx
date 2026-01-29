@@ -4,6 +4,7 @@ import { useFormBuilder } from "@/context/FormBuilderContext";
 import { FormElementType } from "@/types/form-builder";
 import { useDraggable } from "@dnd-kit/core";
 import { FormElements } from "./FormElements";
+import { motion } from "@/lib/animations";
 
 export function Sidebar() {
     const { addElement, elements } = useFormBuilder();
@@ -18,26 +19,31 @@ export function Sidebar() {
     ];
 
     return (
-        <aside className="w-[280px] h-full bg-base-100 border-r border-base-200 flex flex-col overflow-y-auto">
-            <div className="p-4 border-b border-base-200">
-                <h3 className="font-bold text-sm uppercase tracking-wider text-base-content/70">Components</h3>
-                <p className="text-xs text-base-content/50 mt-1">Drag and drop to add to canvas</p>
+        <div className="h-full bg-base-100 flex flex-col overflow-y-auto overflow-x-hidden">
+            <div className="p-4 border-b border-base-200 shrink-0">
+                <p className="text-xs text-base-content/50">Drag and drop to add to canvas</p>
             </div>
 
-            <div className="p-4 flex flex-col gap-3">
-                {elementTypes.map((type) => (
-                    <SidebarBtnElement
+            <div className="p-4 flex flex-col gap-3 flex-1">
+                {elementTypes.map((type, index) => (
+                    <motion.div
                         key={type}
-                        type={type}
-                        label={FormElements[type].label}
-                        onAdd={() => {
-                            const newElement = FormElements[type].construct(crypto.randomUUID());
-                            addElement(elements.length, newElement);
-                        }}
-                    />
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05, duration: 0.2 }}
+                    >
+                        <SidebarBtnElement
+                            type={type}
+                            label={FormElements[type].label}
+                            onAdd={() => {
+                                const newElement = FormElements[type].construct(crypto.randomUUID());
+                                addElement(elements.length, newElement);
+                            }}
+                        />
+                    </motion.div>
                 ))}
             </div>
-        </aside>
+        </div>
     );
 }
 

@@ -9,8 +9,6 @@ import { GeneratedFormElement } from "@/lib/formElementSchema";
 
 export function AIChatSidebar() {
     const {
-        isSidebarOpen,
-        closeSidebar,
         messages,
         sendMessage,
         status,
@@ -33,12 +31,10 @@ export function AIChatSidebar() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Focus input when sidebar opens
+    // Focus input when component mounts
     useEffect(() => {
-        if (isSidebarOpen) {
-            inputRef.current?.focus();
-        }
-    }, [isSidebarOpen]);
+        inputRef.current?.focus();
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,32 +134,21 @@ export function AIChatSidebar() {
         await markMessageApplied(messageId);
     };
 
-    if (!isSidebarOpen) return null;
-
     return (
-        <div className="fixed inset-y-0 right-0 w-96 bg-base-100 border-l border-base-300 shadow-xl z-50 flex flex-col">
+        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-base-300 bg-base-200/50">
+            <div className="flex items-center justify-between p-4 border-b border-base-200 bg-base-50/50 shrink-0">
                 <div className="flex items-center gap-2">
                     <BsStars className="w-5 h-5 text-primary" />
-                    <h2 className="font-semibold text-lg">AI Form Builder</h2>
+                    <h2 className="font-semibold">AI Form Builder</h2>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={handleClearChat}
-                        className="btn btn-ghost btn-sm btn-square"
-                        title="Clear chat history"
-                    >
-                        <FiTrash2 className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={closeSidebar}
-                        className="btn btn-ghost btn-sm btn-square"
-                        title="Close"
-                    >
-                        <FiX className="w-4 h-4" />
-                    </button>
-                </div>
+                <button
+                    onClick={handleClearChat}
+                    className="btn btn-ghost btn-sm btn-square"
+                    title="Clear chat history"
+                >
+                    <FiTrash2 className="w-4 h-4" />
+                </button>
             </div>
 
             {/* Messages */}
@@ -406,21 +391,5 @@ export function AIChatSidebar() {
                 </form>
             </div>
         </div>
-    );
-}
-
-// Toggle button component for the header
-export function AIChatToggleButton() {
-    const { toggleSidebar, isSidebarOpen } = useAIChat();
-
-    return (
-        <button
-            onClick={toggleSidebar}
-            className={`btn btn-ghost gap-2 ${isSidebarOpen ? "btn-active" : ""}`}
-            title="AI Form Builder"
-        >
-            <BsStars className="w-5 h-5" />
-            <span className="hidden sm:inline">AI Builder</span>
-        </button>
     );
 }
