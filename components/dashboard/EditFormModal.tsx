@@ -1,54 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import { useWorkspace } from "@/context/WorkspaceContext";
+import { useState, useEffect } from "react";
+import { updateFormMetadata } from "@/actions/form";
 import { useToast } from "@/context/ToastContext";
-import { useUser } from "@clerk/nextjs";
-import { createForm } from "@/actions/form";
-import { useRouter } from "next/navigation";
+import type { FormWithStats } from "@/types/form-builder";
 
-export function CreateFormModal({ onClose }: { onClose: () => void }) {
-    const { currentWorkspace } = useWorkspace();
-    const { user } = useUser();
-    const router = useRouter();
-    const toast = useToast();
+interface EditFormModalProps {
+    form: FormWithStats;
+    onClose: () => void;
+    onSuccess: (updatedForm: FormWithStats) => void;
+}
 
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
+export function EditFormModal({ form, onClose, onSuccess }: EditFormModalProps) {
+    const { success, error } = useToast();
+    const [name, setName] = useState(form.name);
+    const [description, setDescription] = useState(form.description || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Reset form when form prop changes
+    useEffect(() => {
+        setName(form.name);
+        setDescription(form.description || "");
+    }, [form]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !user || !currentWorkspace) return;
+        if (!name.trim()) return;
 
         setIsSubmitting(true);
         try {
-            const newForm = await createForm(
-                currentWorkspace.id,
-                user.id,
-                name,
-                description
-            );
-
-            toast.success("Form created successfully!");
-            // Navigate to builder
-            router.push(`/builder/${newForm.id}`);
+            const updatedForm = await updateFormMetadata(form.id, {
+                name: name.trim(),
+                description: description.trim() || undefined,
+            });
+            
+            success("Form updated successfully");
+            onSuccess({ ...form, ...updatedForm });
             onClose();
-        } catch (error: any) {
-            console.error("Error creating form:", error);
-            toast.error(error.message || "Failed to create form");
+        } catch (err: any) {
+            console.error("Error updating form:", err);
+            error(err.message || "Failed to update form");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <dialog id="create_form_modal" className="modal modal-open">
+        <dialog className="modal modal-open">
             <div className="modal-box">
-                <h3 className="font-bold text-lg">Create New Form</h3>
-                <p className="py-2 text-sm text-base-content/70">
-                    In workspace: <span className="font-semibold">{currentWorkspace?.name}</span>
-                </p>
+                <h3 className="font-bold text-lg">Edit Form Details</h3>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
                     <div className="form-control w-full">
                         <label className="label">
@@ -93,7 +93,14 @@ export function CreateFormModal({ onClose }: { onClose: () => void }) {
                             className="btn btn-primary"
                             disabled={isSubmitting || !name.trim()}
                         >
-                            {isSubmitting ? "Creating..." : "Create Form"}
+                            {isSubmitting ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save Changes"
+                            )}
                         </button>
                     </div>
                 </form>

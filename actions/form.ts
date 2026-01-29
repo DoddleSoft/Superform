@@ -2,6 +2,9 @@
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
+import type { Form, FormWithStats, PaginatedResponse, GetFormsParams } from "@/types/form-builder";
+
+// ============== Form CRUD Operations ==============
 
 export async function createForm(
     workspaceId: string,
@@ -28,6 +31,176 @@ export async function createForm(
         throw error;
     }
 
+    revalidatePath("/dashboard");
+    return data;
+}
+
+export async function getForms({
+    workspaceId,
+    page = 1,
+    pageSize = 9,
+    search = "",
+}: GetFormsParams): Promise<PaginatedResponse<FormWithStats>> {
+    const supabase = await createSupabaseServerClient();
+    
+    // Calculate offset
+    const offset = (page - 1) * pageSize;
+    
+    // Build query
+    let query = supabase
+        .from("forms")
+        .select("*, form_submissions(count)", { count: "exact" })
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + pageSize - 1);
+    
+    // Apply search filter if provided
+    if (search.trim()) {
+        query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+    
+    const { data, error, count } = await query;
+    
+    if (error) {
+        throw error;
+    }
+    
+    // Transform data to include submission_count
+    const formsWithStats: FormWithStats[] = (data || []).map((form: any) => ({
+        ...form,
+        submission_count: form.form_submissions?.[0]?.count || 0,
+        form_submissions: undefined, // Remove the nested array
+    }));
+    
+    const total = count || 0;
+    
+    return {
+        data: formsWithStats,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+    };
+}
+
+export async function getFormStats(workspaceId: string): Promise<{ totalForms: number; totalSubmissions: number }> {
+    const supabase = await createSupabaseServerClient();
+    
+    // Get total forms count
+    const { count: formCount, error: formError } = await supabase
+        .from("forms")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId);
+    
+    if (formError) {
+        throw formError;
+    }
+    
+    // Get total submissions across all forms in workspace
+    const { data: forms, error: submissionError } = await supabase
+        .from("forms")
+        .select("id")
+        .eq("workspace_id", workspaceId);
+    
+    if (submissionError) {
+        throw submissionError;
+    }
+    
+    let totalSubmissions = 0;
+    if (forms && forms.length > 0) {
+        const formIds = forms.map(f => f.id);
+        const { count, error } = await supabase
+            .from("form_submissions")
+            .select("*", { count: "exact", head: true })
+            .in("form_id", formIds);
+        
+        if (!error) {
+            totalSubmissions = count || 0;
+        }
+    }
+    
+    return {
+        totalForms: formCount || 0,
+        totalSubmissions,
+    };
+}
+
+export async function deleteForm(formId: string) {
+    const supabase = await createSupabaseServerClient();
+    
+    // Delete submissions first (cascade might handle this, but being explicit)
+    await supabase.from("form_submissions").delete().eq("form_id", formId);
+    
+    // Delete the form
+    const { error } = await supabase
+        .from("forms")
+        .delete()
+        .eq("id", formId);
+    
+    if (error) {
+        throw error;
+    }
+    
+    revalidatePath("/dashboard");
+    return { success: true };
+}
+
+export async function duplicateForm(formId: string, userId: string) {
+    const supabase = await createSupabaseServerClient();
+    
+    // Fetch the original form
+    const { data: original, error: fetchError } = await supabase
+        .from("forms")
+        .select("*")
+        .eq("id", formId)
+        .single();
+    
+    if (fetchError || !original) {
+        throw fetchError || new Error("Form not found");
+    }
+    
+    // Create duplicate
+    const { data, error } = await supabase
+        .from("forms")
+        .insert([
+            {
+                user_id: userId,
+                workspace_id: original.workspace_id,
+                name: `${original.name} (Copy)`,
+                description: original.description,
+                content: original.content,
+                published: false, // Always start as draft
+            },
+        ])
+        .select()
+        .single();
+    
+    if (error) {
+        throw error;
+    }
+    
+    revalidatePath("/dashboard");
+    return data;
+}
+
+export async function updateFormMetadata(
+    formId: string,
+    updates: { name?: string; description?: string }
+) {
+    const supabase = await createSupabaseServerClient();
+    
+    const { data, error } = await supabase
+        .from("forms")
+        .update(updates)
+        .eq("id", formId)
+        .select()
+        .single();
+    
+    if (error) {
+        throw error;
+    }
+    
+    revalidatePath("/dashboard");
     return data;
 }
 
