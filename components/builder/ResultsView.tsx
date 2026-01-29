@@ -3,6 +3,7 @@
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { FormElementInstance, FormElementType } from "@/types/form-builder";
 import React from "react";
+import { FormElements } from "./FormElements";
 
 export function ResultsView({ submissions }: { submissions: any[] }) {
     const { elements } = useFormBuilder();
@@ -20,7 +21,7 @@ export function ResultsView({ submissions }: { submissions: any[] }) {
             case FormElementType.SELECT:
                 columns.push({
                     id: element.id,
-                    label: element.label,
+                    label: element.extraAttributes?.label || FormElements[element.type]?.label || "Field",
                     type: element.type,
                 });
                 break;

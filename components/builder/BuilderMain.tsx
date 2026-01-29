@@ -143,7 +143,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: any
                         )}
                         {activeCanvasElement && (
                             <div className="p-4 rounded-lg border-2 border-primary bg-base-100 opacity-80 w-[300px]">
-                                {activeCanvasElement.label}
+                                {activeCanvasElement.extraAttributes?.label || FormElements[activeCanvasElement.type].label}
                             </div>
                         )}
                     </DragOverlay>

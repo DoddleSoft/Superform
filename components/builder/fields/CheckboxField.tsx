@@ -1,30 +1,27 @@
-"use client";
-
-import { FormElementInstance, FormElementType, FormElementHelper } from "@/types/form-builder";
-import { useFormBuilder } from "@/context/FormBuilderContext";
-import { useState, useEffect } from "react";
+import { MdCheckBox } from "react-icons/md";
+import { FormElementType, FormElementInstance, FormElementHelper } from "@/types/form-builder";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MdTextFields } from "react-icons/md";
+import { useEffect, useState } from "react";
+import { useFormBuilder } from "@/context/FormBuilderContext";
+import { IoMdCheckbox } from "react-icons/io";
 
-const type: FormElementType = FormElementType.TEXT_FIELD;
+const type: FormElementType = FormElementType.CHECKBOX;
 
 const extraAttributes = {
-    label: "Text Field",
-    helperText: "Helper text",
+    label: "Checkbox",
+    helperText: "Check this box",
     required: false,
-    placeholder: "Value here...",
 };
 
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
     required: z.boolean(),
-    placeholder: z.string().max(50),
 });
 
-export const TextFieldFormElement: FormElementHelper = {
+export const CheckboxFieldFormElement: FormElementHelper = {
     type,
     construct: (id: string) => ({
         id,
@@ -36,14 +33,13 @@ export const TextFieldFormElement: FormElementHelper = {
     propertiesComponent: PropertiesComponent,
     validate: (formElement: FormElementInstance, currentValue: string): boolean => {
         const element = formElement as CustomInstance;
-        // Fallback to default constraints if extraAttributes is missing
         if (element.extraAttributes?.required) {
-            return currentValue.length > 0;
+            return currentValue === "true";
         }
 
         return true;
     },
-    label: "Text Field",
+    label: "Checkbox",
 };
 
 type CustomInstance = FormElementInstance & {
@@ -52,24 +48,20 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <label className="label-text">
-                {label}
-                {required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-                readOnly
-                disabled
-                type="text"
-                className="input input-bordered w-full"
-                placeholder={placeholder}
-            />
-            {helperText && (
-                <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
-            )}
+        <div className="flex items-start gap-2 w-full">
+            <input type="checkbox" className="checkbox checkbox-primary" disabled checked />
+            <div className="flex flex-col gap-1">
+                <label className="label-text cursor-pointer">
+                    {label}
+                    {required && <span className="text-red-500">*</span>}
+                </label>
+                {helperText && (
+                    <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
+                )}
+            </div>
         </div>
     );
 }
@@ -86,46 +78,44 @@ function FormComponent({
     defaultValue?: string;
 }) {
     const elementInstance = element as CustomInstance;
-
-    const [value, setValue] = useState(defaultValue || "");
+    const [value, setValue] = useState<boolean>(defaultValue === "true");
     const [error, setError] = useState(false);
 
     useEffect(() => {
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const id = `checkbox-${element.id}`;
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <label className={`label-text ${error ? "text-error" : ""}`}>
-                {label}
-                {required && <span className="text-error">*</span>}
-            </label>
+        <div className="flex items-start gap-2 w-full">
             <input
-                type="text"
-                className={`input input-bordered w-full ${error ? "input-error" : ""}`}
-                placeholder={placeholder}
+                type="checkbox"
+                id={id}
+                className={`checkbox checkbox-primary ${error ? "checkbox-error" : ""}`}
+                checked={value}
                 onChange={(e) => {
-                    setValue(e.target.value);
+                    const checked = e.target.checked;
+                    setValue(checked);
                     if (!submitValue) return;
-                    const valid = TextFieldFormElement.validate(elementInstance, e.target.value);
+                    const stringValue = checked ? "true" : "false";
+                    const valid = CheckboxFieldFormElement.validate(elementInstance, stringValue);
                     setError(!valid);
-                    submitValue(elementInstance.id, e.target.value);
+                    submitValue(elementInstance.id, stringValue);
                 }}
-                onBlur={(e) => {
-                    if (!submitValue) return;
-                    const valid = TextFieldFormElement.validate(elementInstance, e.target.value);
-                    setError(!valid);
-                    submitValue(elementInstance.id, e.target.value);
-                }}
-                value={value}
             />
-            {helperText && (
-                <p className={`text-[0.8rem] text-base-content/70 ${error && "text-error"}`}>
-                    {helperText}
-                </p>
-            )}
+            <div className="flex flex-col gap-1">
+                <label htmlFor={id} className={`label-text cursor-pointer ${error ? "text-error" : ""}`}>
+                    {label}
+                    {required && <span className="text-error">*</span>}
+                </label>
+                {helperText && (
+                    <p className={`text-[0.8rem] text-base-content/70 ${error && "text-error"}`}>
+                        {helperText}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }
@@ -145,7 +135,6 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
             label: defaults.label,
             helperText: defaults.helperText,
             required: defaults.required,
-            placeholder: defaults.placeholder,
         },
     });
 
@@ -154,14 +143,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [elementInstance, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
-        const { label, helperText, required, placeholder } = values;
+        const { label, helperText, required } = values;
         updateElement(elementInstance.id, {
             ...elementInstance,
             extraAttributes: {
                 label,
                 helperText,
                 required,
-                placeholder,
             },
         });
     }
@@ -185,23 +173,6 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                 />
                 <label className="label">
                     <span className="label-text-alt">The label of the field.</span>
-                </label>
-            </div>
-
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Placeholder</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    {...form.register("placeholder")}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                    }}
-                />
-                <label className="label">
-                    <span className="label-text-alt">The placeholder of the field.</span>
                 </label>
             </div>
 

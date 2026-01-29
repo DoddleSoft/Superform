@@ -10,12 +10,19 @@ export enum FormElementType {
 export interface FormElement {
     id: string;
     type: FormElementType;
-    label: string;
-    placeholder?: string;
-    required: boolean;
-    properties?: Record<string, any>; // For type-specific props (e.g. options for select)
+    extraAttributes?: Record<string, any>;
 }
 
 export type FormElementInstance = FormElement & {
     id: string; // Instance ID (unique in the form)
+};
+
+export type FormElementHelper = {
+    type: FormElementType;
+    construct: (id: string) => FormElementInstance;
+    designerComponent: React.FC<{ element: FormElementInstance }>;
+    formComponent: React.FC<{ element: FormElementInstance; submitValue?: (key: string, value: string) => void; isInvalid?: boolean; defaultValue?: string }>;
+    propertiesComponent: React.FC<{ element: FormElementInstance }>;
+    validate: (formElement: FormElementInstance, currentValue: string) => boolean;
+    label: string;
 };

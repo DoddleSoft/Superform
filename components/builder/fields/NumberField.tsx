@@ -1,63 +1,79 @@
 "use client";
 
-import { FormElementInstance, FormElementType } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormElementHelper } from "@/types/form-builder";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { useState, useEffect } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Bs123 } from "react-icons/bs";
 
-export const NumberFormElement = {
-    type: FormElementType.NUMBER,
+const type: FormElementType = FormElementType.NUMBER;
+
+const extraAttributes = {
+    label: "Number Field",
+    helperText: "Helper text",
+    required: false,
+    placeholder: "0",
+};
+
+const propertiesSchema = z.object({
+    label: z.string().min(2).max(50),
+    helperText: z.string().max(200),
+    required: z.boolean(),
+    placeholder: z.string().max(50),
+});
+
+export const NumberFieldFormElement: FormElementHelper = {
+    type,
     construct: (id: string) => ({
         id,
-        type: FormElementType.NUMBER,
-        label: "Number",
-        placeholder: "0",
-        required: false,
-        properties: {
-            helperText: "",
-        },
+        type,
+        extraAttributes,
     }),
-    designerComponent: NumberDesignerComponent,
-    formComponent: NumberFormComponent,
-    propertiesComponent: NumberPropertiesComponent,
-    label: "Number",
-    validate: (element: FormElementInstance, currentValue: string): boolean => {
-        const elementInstance = element as CustomInstance;
-        if (elementInstance.required) {
+    designerComponent: DesignerComponent,
+    formComponent: FormComponent,
+    propertiesComponent: PropertiesComponent,
+    validate: (formElement: FormElementInstance, currentValue: string): boolean => {
+        const element = formElement as CustomInstance;
+        if (element.extraAttributes?.required) {
             return currentValue.length > 0;
         }
 
         return true;
     },
+    label: "Number Field",
 };
 
 type CustomInstance = FormElementInstance & {
-    properties: {
-        helperText?: string;
-    };
+    extraAttributes: typeof extraAttributes;
 };
 
-function NumberDesignerComponent({ element }: { element: FormElementInstance }) {
+function DesignerComponent({ element }: { element: FormElementInstance }) {
+    const elementInstance = element as CustomInstance;
+    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+
     return (
-        <div className="flex flex-col gap-2 w-full pointer-events-none">
-            <label className="label">
-                <span className="label-text">
-                    {element.label} {element.required && <span className="text-error">*</span>}
-                </span>
+        <div className="flex flex-col gap-2 w-full">
+            <label className="label-text">
+                {label}
+                {required && <span className="text-red-500">*</span>}
             </label>
             <input
+                readOnly
+                disabled
                 type="number"
                 className="input input-bordered w-full"
-                placeholder={element.placeholder}
-                disabled
+                placeholder={placeholder}
             />
-            {element.properties?.helperText && (
-                <span className="label-text-alt text-base-content/70">{element.properties.helperText}</span>
+            {helperText && (
+                <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
         </div>
     );
 }
 
-function NumberFormComponent({
+function FormComponent({
     element,
     submitValue,
     isInvalid,
@@ -68,6 +84,8 @@ function NumberFormComponent({
     isInvalid?: boolean;
     defaultValue?: string;
 }) {
+    const elementInstance = element as CustomInstance;
+
     const [value, setValue] = useState(defaultValue || "");
     const [error, setError] = useState(false);
 
@@ -75,42 +93,83 @@ function NumberFormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { helperText } = element.properties as CustomInstance["properties"];
+    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
-        <div className="form-control w-full">
-            <label className="label">
-                <span className={`label-text ${error && "text-error"}`}>
-                    {element.label} {element.required && <span className="text-error">*</span>}
-                </span>
+        <div className="flex flex-col gap-2 w-full">
+            <label className={`label-text ${error ? "text-error" : ""}`}>
+                {label}
+                {required && <span className="text-error">*</span>}
             </label>
             <input
                 type="number"
-                className={`input input-bordered w-full ${error && "input-error"}`}
-                placeholder={element.placeholder}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
+                className={`input input-bordered w-full ${error ? "input-error" : ""}`}
+                placeholder={placeholder}
+                onChange={(e) => {
+                    setValue(e.target.value);
+                    if (!submitValue) return;
+                    const valid = NumberFieldFormElement.validate(elementInstance, e.target.value);
+                    setError(!valid);
+                    submitValue(elementInstance.id, e.target.value);
+                }}
                 onBlur={(e) => {
                     if (!submitValue) return;
-                    const valid = NumberFormElement.validate(element, e.target.value);
+                    const valid = NumberFieldFormElement.validate(elementInstance, e.target.value);
                     setError(!valid);
-                    submitValue(element.id, e.target.value);
+                    submitValue(elementInstance.id, e.target.value);
                 }}
+                value={value}
             />
             {helperText && (
-                <span className={`label-text-alt mt-1 ${error ? "text-error" : "text-base-content/70"}`}>
+                <p className={`text-[0.8rem] text-base-content/70 ${error && "text-error"}`}>
                     {helperText}
-                </span>
+                </p>
             )}
         </div>
     );
 }
 
-function NumberPropertiesComponent({ element }: { element: FormElementInstance }) {
+type propertiesFormSchemaType = z.infer<typeof propertiesSchema>;
+
+function PropertiesComponent({ element }: { element: FormElementInstance }) {
+    const elementInstance = element as CustomInstance;
     const { updateElement } = useFormBuilder();
 
+    const defaults = elementInstance.extraAttributes || extraAttributes;
+
+    const form = useForm<propertiesFormSchemaType>({
+        resolver: zodResolver(propertiesSchema),
+        mode: "onBlur",
+        defaultValues: {
+            label: defaults.label,
+            helperText: defaults.helperText,
+            required: defaults.required,
+            placeholder: defaults.placeholder,
+        },
+    });
+
+    useEffect(() => {
+        form.reset(elementInstance.extraAttributes || extraAttributes);
+    }, [elementInstance, form]);
+
+    function applyChanges(values: propertiesFormSchemaType) {
+        const { label, helperText, required, placeholder } = values;
+        updateElement(elementInstance.id, {
+            ...elementInstance,
+            extraAttributes: {
+                label,
+                helperText,
+                required,
+                placeholder,
+            },
+        });
+    }
+
     return (
-        <div className="flex flex-col gap-4">
+        <form
+            onBlur={form.handleSubmit(applyChanges)}
+            className="flex flex-col gap-4"
+        >
             <div className="form-control w-full">
                 <label className="label">
                     <span className="label-text">Label</span>
@@ -118,10 +177,16 @@ function NumberPropertiesComponent({ element }: { element: FormElementInstance }
                 <input
                     type="text"
                     className="input input-bordered w-full"
-                    value={element.label}
-                    onChange={(e) => updateElement(element.id, { label: e.target.value })}
+                    {...form.register("label")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
                 />
+                <label className="label">
+                    <span className="label-text-alt">The label of the field.</span>
+                </label>
             </div>
+
             <div className="form-control w-full">
                 <label className="label">
                     <span className="label-text">Placeholder</span>
@@ -129,10 +194,16 @@ function NumberPropertiesComponent({ element }: { element: FormElementInstance }
                 <input
                     type="text"
                     className="input input-bordered w-full"
-                    value={element.placeholder || ""}
-                    onChange={(e) => updateElement(element.id, { placeholder: e.target.value })}
+                    {...form.register("placeholder")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
                 />
+                <label className="label">
+                    <span className="label-text-alt">The placeholder of the field.</span>
+                </label>
             </div>
+
             <div className="form-control w-full">
                 <label className="label">
                     <span className="label-text">Helper Text</span>
@@ -140,21 +211,29 @@ function NumberPropertiesComponent({ element }: { element: FormElementInstance }
                 <input
                     type="text"
                     className="input input-bordered w-full"
-                    value={element.properties?.helperText || ""}
-                    onChange={(e) => updateElement(element.id, { properties: { ...element.properties, helperText: e.target.value } })}
+                    {...form.register("helperText")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
                 />
+                <label className="label">
+                    <span className="label-text-alt">Displayed below the field.</span>
+                </label>
             </div>
-            <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-4">
+
+            <div className="form-control w-full">
+                <label className="label cursor-pointer">
                     <span className="label-text">Required</span>
                     <input
                         type="checkbox"
-                        className="checkbox"
-                        checked={element.required}
-                        onChange={(e) => updateElement(element.id, { required: e.target.checked })}
+                        className="toggle"
+                        {...form.register("required")}
                     />
                 </label>
+                <label className="label">
+                    <span className="label-text-alt">Is this field required?</span>
+                </label>
             </div>
-        </div>
+        </form>
     );
 }
