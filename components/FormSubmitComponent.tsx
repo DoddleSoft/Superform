@@ -2,10 +2,15 @@
 
 import { FormElementInstance, FormSection, FormContent } from "@/types/form-builder";
 import { FormElements } from "@/components/builder/FormElements";
-import { useRef, useState, useTransition, useCallback, useEffect } from "react";
-import { submitForm } from "@/actions/form";
+import { useRef, useState, useTransition, useCallback, useEffect, useMemo } from "react";
+import { submitForm, savePartialSubmission } from "@/actions/form";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck } from "react-icons/lu";
+
+// Generate a unique session ID for this form submission attempt
+function generateSessionId(): string {
+    return crypto.randomUUID();
+}
 
 interface FormSubmitComponentProps {
     formUrl: string;
@@ -25,6 +30,10 @@ export function FormSubmitComponent({
     const [submitted, setSubmitted] = useState(false);
     const [pending, startTransition] = useTransition();
     const [direction, setDirection] = useState(0); // -1 for back, 1 for forward
+    
+    // Session ID for tracking partial submissions
+    const sessionId = useRef<string>(generateSessionId());
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Normalize content: support both old flat format and new section format
     const sections: FormSection[] = Array.isArray(content) && content.length > 0
@@ -37,6 +46,65 @@ export function FormSubmitComponent({
     const isFirstSection = currentSectionIndex === 0;
     const isLastSection = currentSectionIndex === sections.length - 1;
     const totalSections = sections.length;
+
+    // Save partial submission after a delay (debounced)
+    const savePartial = useCallback(() => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        
+        saveTimeoutRef.current = setTimeout(async () => {
+            try {
+                // Only save if there's some data
+                if (Object.keys(formValues.current).length > 0) {
+                    await savePartialSubmission(
+                        formId,
+                        sessionId.current,
+                        formValues.current,
+                        currentSectionIndex,
+                        totalSections
+                    );
+                }
+            } catch (error) {
+                // Silently fail - we don't want to interrupt the user experience
+                console.error("Failed to save partial submission:", error);
+            }
+        }, 2000); // Save after 2 seconds of inactivity
+    }, [formId, currentSectionIndex, totalSections]);
+
+    // Save partial when section changes or when user is about to leave
+    useEffect(() => {
+        // Save when navigating between sections
+        if (Object.keys(formValues.current).length > 0) {
+            savePartial();
+        }
+    }, [currentSectionIndex, savePartial]);
+
+    // Save partial submission when user leaves the page
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            // Use sendBeacon for reliable saving on page unload
+            if (Object.keys(formValues.current).length > 0 && !submitted) {
+                const payload = JSON.stringify({
+                    formId,
+                    sessionId: sessionId.current,
+                    data: formValues.current,
+                    currentSectionIndex,
+                    totalSections,
+                });
+                // Note: In production, you'd want to set up an API endpoint for this
+                // navigator.sendBeacon('/api/partial-submission', payload);
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [formId, currentSectionIndex, totalSections, submitted]);
 
     // Validate current section
     const validateCurrentSection = useCallback(() => {
@@ -84,6 +152,8 @@ export function FormSubmitComponent({
 
     const submitValue = (key: string, value: string) => {
         formValues.current[key] = value;
+        // Trigger partial save when values change
+        savePartial();
     };
 
     const handleNext = () => {
@@ -113,7 +183,7 @@ export function FormSubmitComponent({
         startTransition(async () => {
             try {
                 const jsonContent = JSON.stringify(formValues.current);
-                await submitForm(formId, jsonContent);
+                await submitForm(formId, jsonContent, sessionId.current, totalSections);
                 setSubmitted(true);
             } catch (error) {
                 console.error(error);

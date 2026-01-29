@@ -15,6 +15,7 @@ import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
 import { FormElementInstance, FormElementType, FormSection, createSection } from "@/types/form-builder";
+import { FormSubmission } from "@/types/submission";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
 import { BuilderHeader } from "./BuilderHeader";
@@ -24,7 +25,7 @@ import { AIChatProvider } from "@/context/AIChatContext";
 import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
 
-export function BuilderMain({ form, submissions }: { form: any, submissions: any[] }) {
+export function BuilderMain({ form, submissions }: { form: any, submissions: FormSubmission[] }) {
     const { sections, addElement, setSections, setFormMetadata, formId, addSection, moveElement } = useFormBuilder();
     const [activeSidebarElement, setActiveSidebarElement] = useState<FormElementType | null>(null);
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
@@ -199,6 +200,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: any
                 submissions={submissions}
                 saveStatus={saveStatus}
                 lastSavedAt={lastSavedAt}
+                formName={form.name}
             />
         </AIChatProvider>
     );
@@ -216,6 +218,7 @@ function BuilderContent({
     submissions,
     saveStatus,
     lastSavedAt,
+    formName,
 }: {
     activeTab: "build" | "results";
     setActiveTab: (tab: "build" | "results") => void;
@@ -224,9 +227,10 @@ function BuilderContent({
     onDragEnd: (event: DragEndEvent) => void;
     activeSidebarElement: FormElementType | null;
     activeCanvasElement: FormElementInstance | null;
-    submissions: any[];
+    submissions: FormSubmission[];
     saveStatus: SaveStatus;
     lastSavedAt: Date | null;
+    formName?: string;
 }) {
     return (
         <div className="flex flex-col h-screen w-full bg-base-200">
@@ -235,6 +239,7 @@ function BuilderContent({
                 onTabChange={setActiveTab}
                 saveStatus={saveStatus}
                 lastSavedAt={lastSavedAt}
+                formName={formName}
             />
 
             <div className="flex-1 flex overflow-hidden relative">

@@ -267,42 +267,108 @@ export async function getFormContentByUrl(formUrl: string) {
     return data;
 }
 
-export async function submitForm(formId: string, jsonContent: string) {
+export async function submitForm(
+    formId: string,
+    jsonContent: string,
+    sessionId?: string,
+    totalSections?: number
+) {
+    const supabase = await createSupabaseServerClient();
+    const data = JSON.parse(jsonContent);
+
+    // If we have a session ID, update the existing partial submission to complete
+    if (sessionId) {
+        const { error: updateError } = await supabase
+            .from("form_submissions")
+            .update({
+                data,
+                is_complete: true,
+                last_section_index: totalSections || 1,
+                total_sections: totalSections || 1,
+            })
+            .eq("session_id", sessionId);
+
+        if (updateError) {
+            // If update fails (no existing row), insert new
+            const { error: insertError } = await supabase
+                .from("form_submissions")
+                .insert({
+                    form_id: formId,
+                    data,
+                    is_complete: true,
+                    session_id: sessionId,
+                    last_section_index: totalSections || 1,
+                    total_sections: totalSections || 1,
+                });
+
+            if (insertError) {
+                throw insertError;
+            }
+        }
+    } else {
+        // No session ID, just insert a new complete submission
+        const { error } = await supabase
+            .from("form_submissions")
+            .insert({
+                form_id: formId,
+                data,
+                is_complete: true,
+            });
+
+        if (error) {
+            throw error;
+        }
+    }
+}
+
+export async function savePartialSubmission(
+    formId: string,
+    sessionId: string,
+    data: Record<string, string>,
+    currentSectionIndex: number,
+    totalSections: number
+) {
     const supabase = await createSupabaseServerClient();
 
-    // Insert submission
-    const { error } = await supabase
+    // Try to update existing submission first
+    const { data: existing } = await supabase
         .from("form_submissions")
-        .insert({
-            form_id: formId,
-            data: JSON.parse(jsonContent),
-        });
+        .select("id")
+        .eq("session_id", sessionId)
+        .single();
 
-    if (error) {
-        throw error;
+    if (existing) {
+        // Update existing partial submission
+        const { error } = await supabase
+            .from("form_submissions")
+            .update({
+                data,
+                is_complete: false,
+                last_section_index: currentSectionIndex,
+                total_sections: totalSections,
+            })
+            .eq("session_id", sessionId);
+
+        if (error) {
+            throw error;
+        }
+    } else {
+        // Insert new partial submission
+        const { error } = await supabase
+            .from("form_submissions")
+            .insert({
+                form_id: formId,
+                session_id: sessionId,
+                data,
+                is_complete: false,
+                last_section_index: currentSectionIndex,
+                total_sections: totalSections,
+            });
+
+        if (error) {
+            throw error;
+        }
     }
-
-    // Increment submission count
-    await supabase.rpc("increment_submissions", { form_id: formId });
-    // If RPC doesn't exist, we can do it manually, but RPC is atomic.
-    // Fallback manual update if RPC fails?
-    // Actually, let's just do manual update for now as I don't know if RPC exists.
-    // Ideally use a trigger.
-
-    const { error: updateError } = await supabase
-        .from("forms")
-        .update({
-            submissions: undefined, // Wait, how to increment in Supabase JS without RPC?
-            // usually requires rpc.
-            // Let's just skip incrementing for now, focusing on saving data.
-            // Or fetched current -> increment -> save (race condition).
-            // Better to rely on count(form_submissions) if needed.
-            // But let's try a simple RPC call if I had one, but I don't.
-        })
-        .eq("id", formId);
-
-    // Actually, let's look at the `forms` table. `submissions` is an integer.
-    // I won't increment it to avoid race conditions. I'll rely on counting rows later if needed.
 }
 
 export async function getFormSubmissions(formId: string) {

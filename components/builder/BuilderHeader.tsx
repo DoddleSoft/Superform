@@ -4,20 +4,38 @@ import { useFormBuilder } from "@/context/FormBuilderContext";
 import { publishForm } from "@/actions/form";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { LuGlobe, LuArrowLeft, LuLoader, LuCheck, LuCloud, LuCloudOff } from "react-icons/lu";
+import { 
+    LuArrowLeft, 
+    LuLoader, 
+    LuCheck, 
+    LuCloud, 
+    LuCloudOff,
+    LuUndo2,
+    LuRedo2,
+    LuEye,
+    LuSettings,
+    LuShare2,
+    LuPenTool,
+    LuChartBar,
+    LuRocket,
+} from "react-icons/lu";
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
+
+type TabType = "build" | "integrate" | "settings" | "share" | "results";
 
 export function BuilderHeader({
     activeTab,
     onTabChange,
     saveStatus,
     lastSavedAt,
+    formName,
 }: {
     activeTab: "build" | "results";
     onTabChange: (tab: "build" | "results") => void;
     saveStatus: SaveStatus;
     lastSavedAt: Date | null;
+    formName?: string;
 }) {
     const { formId, isPublished, setFormMetadata } = useFormBuilder();
     const [loading, startTransition] = useTransition();
@@ -52,15 +70,31 @@ export function BuilderHeader({
         }
     };
 
+    const tabs = [
+        { id: "build", label: "Build", icon: LuPenTool },
+        { id: "integrate", label: "Integrate", icon: LuRocket, disabled: true },
+        { id: "settings", label: "Settings", icon: LuSettings, disabled: true },
+        { id: "share", label: "Share", icon: LuShare2, disabled: true },
+        { id: "results", label: "Results", icon: LuChartBar },
+    ];
+
     return (
-        <div className="navbar bg-base-100/80 backdrop-blur-md border-b border-base-200 sticky top-0 z-50 h-16 px-4 shrink-0">
-            <div className="navbar-start gap-4">
-                <button onClick={() => router.push("/dashboard")} className="btn btn-ghost btn-circle btn-sm">
-                    <LuArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="flex flex-col">
-                    <span className="font-bold text-lg">Form Builder</span>
-                    <div className="flex items-center gap-2">
+        <div className="bg-base-100 border-b border-base-200 sticky top-0 z-50 shrink-0">
+            {/* Single Row - All content on one line */}
+            <div className="flex items-center justify-between px-6 py-3">
+                {/* Left: Back button and Form name */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <button 
+                        onClick={() => router.push("/dashboard")} 
+                        className="btn btn-ghost btn-sm btn-circle"
+                        title="Back to dashboard"
+                    >
+                        <LuArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <h1 className="text-xl font-semibold text-base-content truncate">
+                            {formName || "Untitled Form"}
+                        </h1>
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={saveStatus}
@@ -68,21 +102,21 @@ export function BuilderHeader({
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
-                                className="flex items-center gap-1.5"
+                                className="flex items-center gap-1.5 whitespace-nowrap"
                             >
                                 {saveStatus === "saving" && (
-                                    <LuLoader className="w-3 h-3 animate-spin text-base-content/60" />
+                                    <LuLoader className="w-3.5 h-3.5 animate-spin text-base-content/60" />
                                 )}
                                 {saveStatus === "saved" && (
-                                    <LuCheck className="w-3 h-3 text-success" />
+                                    <LuCheck className="w-3.5 h-3.5 text-success" />
                                 )}
                                 {saveStatus === "error" && (
-                                    <LuCloudOff className="w-3 h-3 text-error" />
+                                    <LuCloudOff className="w-3.5 h-3.5 text-error" />
                                 )}
-                                {saveStatus === "idle" && (
-                                    <LuCloud className="w-3 h-3 text-base-content/40" />
+                                {saveStatus === "idle" && isPublished && (
+                                    <LuCloud className="w-3.5 h-3.5 text-base-content/40" />
                                 )}
-                                <span className={`text-xs ${
+                                <span className={`text-xs font-medium ${
                                     saveStatus === "error" ? "text-error" : 
                                     saveStatus === "saved" ? "text-success" : 
                                     "text-base-content/60"
@@ -93,36 +127,94 @@ export function BuilderHeader({
                         </AnimatePresence>
                     </div>
                 </div>
-            </div>
 
-            <div className="navbar-center">
-                <div role="tablist" className="tabs tabs-boxed bg-base-200/50 p-1">
-                    <button
-                        role="tab"
-                        className={`tab tab-sm transition-all ${activeTab === "build" ? "tab-active bg-white shadow-sm" : ""}`}
-                        onClick={() => onTabChange("build")}
+                {/* Center: Navigation Tabs */}
+                <div className="flex items-center justify-center flex-1">
+                    <div className="flex items-center gap-1">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = tab.id === activeTab;
+                            const isDisabled = tab.disabled;
+                            
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => {
+                                        if (!isDisabled && (tab.id === "build" || tab.id === "results")) {
+                                            onTabChange(tab.id as "build" | "results");
+                                        }
+                                    }}
+                                    disabled={isDisabled}
+                                    className={`
+                                        relative px-4 py-2 flex items-center gap-2 text-sm font-medium
+                                        transition-colors rounded-lg
+                                        ${isActive 
+                                            ? "text-primary bg-primary/10" 
+                                            : isDisabled
+                                            ? "text-base-content/30 cursor-not-allowed"
+                                            : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
+                                        }
+                                    `}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Right: Action buttons */}
+                <div className="flex items-center gap-2 flex-1 justify-end">
+                    {/* Undo/Redo */}
+                    <div className="flex items-center rounded-lg border border-base-300 divide-x divide-base-300">
+                        <button 
+                            className="btn btn-ghost btn-sm border-0 rounded-r-none"
+                            disabled
+                            title="Undo"
+                        >
+                            <LuUndo2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                            className="btn btn-ghost btn-sm border-0 rounded-l-none"
+                            disabled
+                            title="Redo"
+                        >
+                            <LuRedo2 className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    {/* Preview */}
+                    <button 
+                        className="btn btn-ghost btn-sm gap-2"
+                        disabled={!isPublished}
+                        onClick={() => {
+                            if (isPublished) {
+                                window.open(`/submit/${formId}`, '_blank');
+                            }
+                        }}
+                        title="Preview form"
                     >
-                        Builder
+                        <LuEye className="w-4 h-4" />
+                        <span className="hidden sm:inline">Preview</span>
                     </button>
+
+                    {/* Publish */}
                     <button
-                        role="tab"
-                        className={`tab tab-sm transition-all ${activeTab === "results" ? "tab-active bg-white shadow-sm" : ""}`}
-                        onClick={() => onTabChange("results")}
+                        className={`btn btn-sm gap-2 ${isPublished ? "btn-ghost" : "btn-primary"}`}
+                        onClick={handlePublish}
+                        disabled={loading}
                     >
-                        Results
+                        {loading ? (
+                            <LuLoader className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <LuRocket className="w-4 h-4" />
+                        )}
+                        <span className="font-semibold">
+                            {isPublished ? "Published" : "Publish"}
+                        </span>
                     </button>
                 </div>
-            </div>
-
-            <div className="navbar-end gap-2">
-                <button
-                    className={`btn btn-sm gap-2 ${isPublished ? "btn-secondary" : "btn-primary"}`}
-                    onClick={handlePublish}
-                    disabled={loading}
-                >
-                    {loading ? <LuLoader className="animate-spin" /> : <LuGlobe />}
-                    <span className="hidden sm:inline">{isPublished ? "View Live" : "Publish"}</span>
-                </button>
             </div>
         </div>
     );
