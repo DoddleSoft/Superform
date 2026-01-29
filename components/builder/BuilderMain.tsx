@@ -20,8 +20,9 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { BuilderHeader } from "./BuilderHeader";
 import { useEffect } from "react";
 import { FormElements } from "./FormElements";
-
 import { ResultsView } from "./ResultsView";
+import { AIChatProvider } from "@/context/AIChatContext";
+import { AIChatSidebar } from "./AIChatSidebar";
 
 export function BuilderMain({ form, submissions }: { form: any, submissions: any[] }) {
     const { elements, addElement, setElements, setFormMetadata } = useFormBuilder();
@@ -121,41 +122,48 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: any
     }
 
     return (
-        <div className="flex flex-col h-screen w-full">
-            <BuilderHeader activeTab={activeTab} onTabChange={setActiveTab} />
+        <AIChatProvider formId={form.id}>
+            <div className="flex flex-col h-screen w-full">
+                <BuilderHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {activeTab === "build" && (
-                <DndContext
-                    sensors={sensors}
-                    onDragStart={onDragStart}
-                    onDragEnd={onDragEnd}
-                >
+                {activeTab === "build" && (
+                    <DndContext
+                        sensors={sensors}
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                    >
+                        <div className="flex h-[calc(100vh-theme(spacing.16))] w-full">
+                            <Sidebar />
+                            <Canvas />
+                            <PropertiesPanel />
+                        </div>
+                        <DragOverlay>
+                            {activeSidebarElement && (
+                                <div className="btn btn-neutral w-full justify-start cursor-grabbing shadow-xl ring-2 ring-primary">
+                                    {FormElements[activeSidebarElement].label}
+                                </div>
+                            )}
+                            {activeCanvasElement && (
+                                <div className="p-4 rounded-xl shadow-2xl bg-base-100 ring-2 ring-primary w-[300px] pointer-events-none">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold">{activeCanvasElement.extraAttributes?.label || FormElements[activeCanvasElement.type].label}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </DragOverlay>
+                    </DndContext>
+                )}
+
+                {activeTab === "results" && (
                     <div className="flex h-[calc(100vh-theme(spacing.16))] w-full">
-                        <Sidebar />
-                        <Canvas />
-                        <PropertiesPanel />
+                        <ResultsView submissions={submissions} />
                     </div>
-                    <DragOverlay>
-                        {activeSidebarElement && (
-                            <div className="btn btn-outline w-[150px] cursor-grabbing opacity-80">
-                                {FormElements[activeSidebarElement].label}
-                            </div>
-                        )}
-                        {activeCanvasElement && (
-                            <div className="p-4 rounded-lg border-2 border-primary bg-base-100 opacity-80 w-[300px]">
-                                {activeCanvasElement.extraAttributes?.label || FormElements[activeCanvasElement.type].label}
-                            </div>
-                        )}
-                    </DragOverlay>
-                </DndContext>
-            )}
+                )}
 
-            {activeTab === "results" && (
-                <div className="flex h-[calc(100vh-theme(spacing.16))] w-full">
-                    <ResultsView submissions={submissions} />
-                </div>
-            )}
-        </div>
+                {/* AI Chat Sidebar */}
+                <AIChatSidebar />
+            </div>
+        </AIChatProvider>
     );
 }
 

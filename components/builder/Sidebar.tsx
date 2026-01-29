@@ -18,9 +18,13 @@ export function Sidebar() {
     ];
 
     return (
-        <div className="w-64 border-r border-base-300 h-full p-4 overflow-y-auto bg-base-100">
-            <h3 className="font-bold text-lg mb-4">Elements</h3>
-            <div className="flex flex-col gap-2">
+        <aside className="w-[280px] h-full bg-base-100 border-r border-base-200 flex flex-col overflow-y-auto">
+            <div className="p-4 border-b border-base-200">
+                <h3 className="font-bold text-sm uppercase tracking-wider text-base-content/70">Components</h3>
+                <p className="text-xs text-base-content/50 mt-1">Drag and drop to add to canvas</p>
+            </div>
+
+            <div className="p-4 flex flex-col gap-3">
                 {elementTypes.map((type) => (
                     <SidebarBtnElement
                         key={type}
@@ -33,7 +37,7 @@ export function Sidebar() {
                     />
                 ))}
             </div>
-        </div>
+        </aside>
     );
 }
 
@@ -47,14 +51,19 @@ function SidebarBtnElement({ type, label, onAdd }: { type: FormElementType; labe
     });
 
     return (
-        <button
+        <div
             ref={setNodeRef}
-            className="btn btn-outline btn-sm justify-start cursor-grab active:cursor-grabbing"
+            className="card card-compact bg-base-100 border border-base-200 hover:border-primary hover:shadow-md transition-all cursor-grab active:cursor-grabbing group"
             onClick={onAdd}
             {...listeners}
             {...attributes}
         >
-            + {label}
-        </button>
+            <div className="card-body flex-row items-center gap-3 py-3">
+                <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <span className="font-bold text-xs">{label.substring(0, 2).toUpperCase()}</span>
+                </div>
+                <span className="font-medium text-sm">{label}</span>
+            </div>
+        </div>
     );
 }

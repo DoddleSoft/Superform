@@ -4,6 +4,8 @@ import { useFormBuilder } from "@/context/FormBuilderContext";
 import { publishForm, saveFormContent } from "@/actions/form";
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LuSave, LuGlobe, LuArrowLeft, LuLoader, LuCheck } from "react-icons/lu";
+import { AIChatToggleButton } from "./AIChatSidebar";
 
 export function BuilderHeader({
     activeTab,
@@ -37,7 +39,6 @@ export function BuilderHeader({
         startTransition(async () => {
             try {
                 const result = await publishForm(formId);
-                // Assume result contains updated published state and share_url
                 if (result) {
                     setFormMetadata(result.id, result.published, result.share_url);
                     alert(`Form Published! Share URL: ${window.location.origin}/submit/${result.share_url}`);
@@ -50,26 +51,29 @@ export function BuilderHeader({
     };
 
     return (
-        <div className="flex justify-between items-center p-4 border-b border-base-300 bg-base-100 h-16">
-            <div className="flex items-center gap-4 w-1/4">
-                <a href="/dashboard" className="btn btn-ghost btn-sm">
-                    &larr; Back
-                </a>
-                <h1 className="font-bold text-xl truncate">Form Builder</h1>
+        <div className="navbar bg-base-100/80 backdrop-blur-md border-b border-base-200 sticky top-0 z-50 h-16 px-4">
+            <div className="navbar-start gap-4">
+                <button onClick={() => router.push("/dashboard")} className="btn btn-ghost btn-circle btn-sm">
+                    <LuArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="flex flex-col">
+                    <span className="font-bold text-lg">Form Builder</span>
+                    <span className="text-xs text-base-content/60">{loading ? "Saving..." : saved ? "All changes saved" : isPublished ? "Published" : "Draft"}</span>
+                </div>
             </div>
 
-            <div className="flex justify-center flex-1">
-                <div role="tablist" className="tabs tabs-boxed">
+            <div className="navbar-center">
+                <div role="tablist" className="tabs tabs-boxed bg-base-200/50 p-1">
                     <a
                         role="tab"
-                        className={`tab ${activeTab === "build" ? "tab-active" : ""}`}
+                        className={`tab tab-sm transition-all ${activeTab === "build" ? "tab-active bg-white shadow-sm" : ""}`}
                         onClick={() => onTabChange("build")}
                     >
-                        Build
+                        Builder
                     </a>
                     <a
                         role="tab"
-                        className={`tab ${activeTab === "results" ? "tab-active" : ""}`}
+                        className={`tab tab-sm transition-all ${activeTab === "results" ? "tab-active bg-white shadow-sm" : ""}`}
                         onClick={() => onTabChange("results")}
                     >
                         Results
@@ -77,23 +81,23 @@ export function BuilderHeader({
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 w-1/4 justify-end">
-                <div className="text-sm text-base-content/60 mr-2">
-                    {loading ? "Saving..." : saved ? "Saved!" : ""}
-                </div>
+            <div className="navbar-end gap-2">
+                <AIChatToggleButton />
                 <button
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-ghost btn-sm gap-2"
                     onClick={handleSave}
                     disabled={loading}
                 >
-                    Save
+                    {loading ? <LuLoader className="animate-spin" /> : saved ? <LuCheck className="text-success" /> : <LuSave />}
+                    <span className="hidden sm:inline">Save</span>
                 </button>
                 <button
-                    className="btn btn-primary btn-sm"
+                    className={`btn btn-sm gap-2 ${isPublished ? "btn-secondary" : "btn-primary"}`}
                     onClick={handlePublish}
                     disabled={loading}
                 >
-                    {isPublished ? "View Public Form" : "Publish"}
+                    <LuGlobe />
+                    <span className="hidden sm:inline">{isPublished ? "View Live" : "Publish"}</span>
                 </button>
             </div>
         </div>
