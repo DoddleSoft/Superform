@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useSupabase } from "@/lib/supabaseClient";
 import { useUser } from "@clerk/nextjs";
 import { createForm } from "@/actions/form";
 import { useRouter } from "next/navigation";
@@ -10,7 +9,6 @@ import { useRouter } from "next/navigation";
 export function CreateFormModal({ onClose }: { onClose: () => void }) {
     const { currentWorkspace } = useWorkspace();
     const { user } = useUser();
-    const supabase = useSupabase();
     const router = useRouter();
 
     const [name, setName] = useState("");
@@ -24,7 +22,6 @@ export function CreateFormModal({ onClose }: { onClose: () => void }) {
         setIsSubmitting(true);
         try {
             const newForm = await createForm(
-                supabase,
                 currentWorkspace.id,
                 user.id,
                 name,

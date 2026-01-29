@@ -7,6 +7,7 @@ import {
     ReactNode,
     Dispatch,
     SetStateAction,
+    useCallback,
 } from "react";
 import { FormElementInstance, FormElementType } from "@/types/form-builder";
 
@@ -15,9 +16,15 @@ type FormBuilderContextType = {
     setElements: Dispatch<SetStateAction<FormElementInstance[]>>;
     selectedElement: FormElementInstance | null;
     setSelectedElement: Dispatch<SetStateAction<FormElementInstance | null>>;
-    addElement: (type: FormElementType) => void;
+    addElement: (index: number, element: FormElementInstance) => void;
     removeElement: (id: string) => void;
     updateElement: (id: string, updates: Partial<FormElementInstance>) => void;
+
+    // Form Metadata
+    formId: string | null;
+    isPublished: boolean;
+    shareUrl: string | null;
+    setFormMetadata: (id: string, published: boolean, shareUrl: string | null) => void;
 };
 
 const FormBuilderContext = createContext<FormBuilderContextType | undefined>(
@@ -29,28 +36,33 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [selectedElement, setSelectedElement] = useState<FormElementInstance | null>(
         null
     );
+    const [formId, setFormId] = useState<string | null>(null);
+    const [isPublished, setIsPublished] = useState(false);
+    const [shareUrl, setShareUrl] = useState<string | null>(null);
 
-    const addElement = (type: FormElementType) => {
-        const newElement: FormElementInstance = {
-            id: crypto.randomUUID(),
-            type,
-            label: `New ${type}`,
-            placeholder: "",
-            required: false,
-            properties: {},
-        };
-        setElements((prev) => [...prev, newElement]);
-        setSelectedElement(newElement);
-    };
+    const setFormMetadata = useCallback((id: string, published: boolean, url: string | null) => {
+        setFormId(id);
+        setIsPublished(published);
+        setShareUrl(url);
+    }, []);
 
-    const removeElement = (id: string) => {
+    const addElement = useCallback((index: number, element: FormElementInstance) => {
+        setElements((prev) => {
+            const newElements = [...prev];
+            newElements.splice(index, 0, element);
+            return newElements;
+        });
+        setSelectedElement(element);
+    }, []);
+
+    const removeElement = useCallback((id: string) => {
         setElements((prev) => prev.filter((el) => el.id !== id));
         if (selectedElement?.id === id) {
             setSelectedElement(null);
         }
-    };
+    }, [selectedElement]);
 
-    const updateElement = (id: string, updates: Partial<FormElementInstance>) => {
+    const updateElement = useCallback((id: string, updates: Partial<FormElementInstance>) => {
         setElements((prev) =>
             prev.map((el) => (el.id === id ? { ...el, ...updates } : el))
         );
@@ -58,7 +70,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         if (selectedElement?.id === id) {
             setSelectedElement((prev) => prev ? { ...prev, ...updates } : null);
         }
-    };
+    }, [selectedElement]);
 
     return (
         <FormBuilderContext.Provider
@@ -70,6 +82,10 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 addElement,
                 removeElement,
                 updateElement,
+                formId,
+                isPublished,
+                shareUrl,
+                setFormMetadata,
             }}
         >
             {children}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
+import { FormElements } from "./FormElements";
 
 export function PropertiesPanel() {
-    const { selectedElement, updateElement, removeElement } = useFormBuilder();
+    const { selectedElement, removeElement } = useFormBuilder();
 
     if (!selectedElement) {
         return (
@@ -12,6 +13,8 @@ export function PropertiesPanel() {
             </div>
         );
     }
+
+    const PropertiesComponent = FormElements[selectedElement.type].propertiesComponent;
 
     return (
         <div className="w-80 border-l border-base-300 h-full p-4 overflow-y-auto bg-base-100">
@@ -25,41 +28,7 @@ export function PropertiesPanel() {
                 </button>
             </div>
 
-            <div className="form-control w-full mb-4">
-                <label className="label">
-                    <span className="label-text">Label</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    value={selectedElement.label}
-                    onChange={(e) => updateElement(selectedElement.id, { label: e.target.value })}
-                />
-            </div>
-
-            <div className="form-control w-full mb-4">
-                <label className="label">
-                    <span className="label-text">Placeholder</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
-                    value={selectedElement.placeholder || ""}
-                    onChange={(e) => updateElement(selectedElement.id, { placeholder: e.target.value })}
-                />
-            </div>
-
-            <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-4">
-                    <span className="label-text">Required</span>
-                    <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={selectedElement.required}
-                        onChange={(e) => updateElement(selectedElement.id, { required: e.target.checked })}
-                    />
-                </label>
-            </div>
+            <PropertiesComponent element={selectedElement} />
         </div>
     );
 }
