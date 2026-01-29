@@ -151,7 +151,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
 
     useEffect(() => {
         form.reset(elementInstance.extraAttributes || extraAttributes);
-    }, [elementInstance, form]);
+    }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
         const { label, helperText, required, placeholder } = values;

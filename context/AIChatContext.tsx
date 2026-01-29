@@ -90,7 +90,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
     const [isSessionReady, setIsSessionReady] = useState(false);
     const [appliedMessageIds, setAppliedMessageIds] = useState<Set<string>>(new Set());
 
-    const { setSections, sections: currentSections, currentSectionId } = useFormBuilder();
+    const { setSections, sections: currentSections, currentSectionId, selectedElement, setSelectedElement } = useFormBuilder();
 
     // Initialize chat session
     useEffect(() => {
@@ -379,7 +379,13 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                             (el) => !action.fieldIds.includes(el.id)
                         ),
                     }));
-                    if (!existingSections) setSections(result);
+                    if (!existingSections) {
+                        setSections(result);
+                        // Clear selectedElement if it was deleted
+                        if (selectedElement && action.fieldIds.includes(selectedElement.id)) {
+                            setSelectedElement(null);
+                        }
+                    }
                     return result;
                 }
                 case "updateField": {
@@ -401,7 +407,25 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                             return el;
                         }),
                     }));
-                    if (!existingSections) setSections(result);
+                    if (!existingSections) {
+                        setSections(result);
+                        // Also update selectedElement if the updated field is currently selected
+                        if (selectedElement?.id === action.fieldId) {
+                            setSelectedElement((prev) => {
+                                if (!prev) return null;
+                                return {
+                                    ...prev,
+                                    type: action.updates.type
+                                        ? (action.updates.type as FormElementType)
+                                        : prev.type,
+                                    extraAttributes: {
+                                        ...prev.extraAttributes,
+                                        ...action.updates.extraAttributes,
+                                    },
+                                };
+                            });
+                        }
+                    }
                     return result;
                 }
                 case "replaceForm": {
@@ -415,7 +439,11 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                             extraAttributes: el.extraAttributes,
                         })),
                     }));
-                    if (!existingSections) setSections(newSections);
+                    if (!existingSections) {
+                        setSections(newSections);
+                        // Clear selectedElement since form was replaced
+                        setSelectedElement(null);
+                    }
                     return newSections;
                 }
                 case "reorderFields": {
@@ -448,19 +476,61 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                     return workingSections;
             }
         },
-        [currentSections, currentSectionId, setSections, findElementSection]
+        [currentSections, currentSectionId, setSections, findElementSection, selectedElement, setSelectedElement]
     );
 
     // Apply multiple actions in sequence
     const applyMultipleActions = useCallback(
         (actions: FormToolAction[]) => {
-            let sections = currentSections;
+            let sections = [...currentSections];
+            let deletedFieldIds: string[] = [];
+            let updatedFields: Map<string, { type?: string; extraAttributes?: Record<string, unknown> }> = new Map();
+            let formReplaced = false;
+
             for (const action of actions) {
-                sections = applyFormAction(action, sections) || sections;
+                const result = applyFormAction(action, sections);
+                if (result) {
+                    sections = result;
+                }
+
+                // Track changes that affect selectedElement
+                if (action.type === "deleteFields") {
+                    deletedFieldIds.push(...action.fieldIds);
+                } else if (action.type === "updateField") {
+                    updatedFields.set(action.fieldId, action.updates);
+                } else if (action.type === "replaceForm") {
+                    formReplaced = true;
+                }
             }
+
             setSections(sections);
+
+            // Update selectedElement based on tracked changes
+            if (formReplaced) {
+                // Form was replaced, clear selection
+                setSelectedElement(null);
+            } else if (selectedElement && deletedFieldIds.includes(selectedElement.id)) {
+                // Selected element was deleted
+                setSelectedElement(null);
+            } else if (selectedElement && updatedFields.has(selectedElement.id)) {
+                // Selected element was updated - sync the changes
+                const updates = updatedFields.get(selectedElement.id)!;
+                setSelectedElement((prev) => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        type: updates.type
+                            ? (updates.type as FormElementType)
+                            : prev.type,
+                        extraAttributes: {
+                            ...prev.extraAttributes,
+                            ...updates.extraAttributes,
+                        },
+                    };
+                });
+            }
         },
-        [currentSections, applyFormAction, setSections]
+        [currentSections, applyFormAction, setSections, selectedElement, setSelectedElement]
     );
 
     // Mark a message's actions as applied (persists to database)

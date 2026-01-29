@@ -242,7 +242,7 @@ export function AIChatSidebar() {
                                                         )}
 
                                                         {/* Update field preview */}
-                                                        {action.type === "updateField" && (
+                                                        {action.type === "updateField" && action.updates && (
                                                             <div className="text-xs bg-warning/10 px-2 py-1 rounded flex items-center gap-1">
                                                                 <FiEdit2 className="w-3 h-3" />
                                                                 <span>
