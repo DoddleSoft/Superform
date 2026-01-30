@@ -7,7 +7,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceSettingsModal } from "@/components/dashboard";
 import Link from "next/link";
-import { FiMenu, FiX, FiSettings, FiHome, FiBell, FiGift } from "react-icons/fi";
+import { FiMenu, FiX, FiSettings, FiHome, FiBell } from "react-icons/fi";
 
 export default function DashboardLayout({
     children,
@@ -35,7 +35,7 @@ export default function DashboardLayout({
                                     <FiMenu className="w-5 h-5" />
                                 )}
                             </button>
-                            
+
                             {/* Logo Icon */}
                             <Link href="/dashboard" className="flex items-center gap-2">
                                 <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
@@ -45,48 +45,27 @@ export default function DashboardLayout({
                                 </div>
                             </Link>
 
-                            {/* App Switcher */}
-                            <div className="hidden sm:flex items-center">
-                                <div className="dropdown">
-                                    <label tabIndex={0} className="btn btn-ghost btn-sm gap-1 font-normal">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                                        </svg>
-                                        N
-                                        <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </label>
-                                </div>
-                            </div>
+
                         </div>
 
                         <div className="navbar-end gap-2">
-                            {/* Trial Badge */}
-                            <div className="hidden md:flex items-center gap-2 text-sm text-base-content/70">
-                                <span>2-day free trial</span>
-                                <span>👋</span>
-                            </div>
-                            
+
+
                             {/* Buy PRO Button */}
                             <button className="btn btn-sm btn-primary px-4">
-                                Buy PRO
+                                Try PRO
                             </button>
-                            
-                            {/* Gift/Rewards Icon */}
-                            <button className="btn btn-ghost btn-sm btn-circle relative">
-                                <FiGift className="w-5 h-5" />
-                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                            </button>
-                            
+
+
+
                             {/* Notifications */}
                             <button className="btn btn-ghost btn-sm btn-circle relative">
                                 <FiBell className="w-5 h-5" />
                                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
                             </button>
-                            
+
                             <ThemeToggle />
-                            
+
                             {/* User Info */}
                             <div className="hidden sm:flex items-center gap-2">
                                 <span className="text-sm text-base-content/70">Hi, N</span>
