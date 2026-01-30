@@ -117,8 +117,8 @@ function FormComponent({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <label className={`text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <AiFillStar className="w-6 h-6 text-warning" />
+            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
+                <AiFillStar className="form-field-icon w-6 h-6 text-warning" />
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
@@ -141,9 +141,9 @@ function FormComponent({
                                 onClick={() => handleClick(value)}
                             >
                                 {isFilled ? (
-                                    <AiFillStar className="w-10 h-10 md:w-12 md:h-12 text-warning drop-shadow-sm" />
+                                    <AiFillStar className="form-rating-star w-10 h-10 md:w-12 md:h-12 text-warning drop-shadow-sm" />
                                 ) : (
-                                    <AiOutlineStar className="w-10 h-10 md:w-12 md:h-12 text-[#262627]/30 hover:text-warning/50" />
+                                    <AiOutlineStar className="form-rating-star w-10 h-10 md:w-12 md:h-12 text-[#262627]/30 hover:text-warning/50" />
                                 )}
                             </button>
                         );
@@ -160,7 +160,7 @@ function FormComponent({
                                 key={i}
                                 type="button"
                                 className={`
-                                    w-12 h-12 md:w-14 md:h-14 rounded-lg border-2 text-lg md:text-xl font-semibold
+                                    form-rating-number w-12 h-12 md:w-14 md:h-14 rounded-lg border-2 text-lg md:text-xl font-semibold
                                     transition-all focus:outline-none focus:ring-2 focus:ring-[#0445AF]/50
                                     ${isSelected 
                                         ? "bg-[#0445AF] text-white border-[#0445AF]" 
@@ -177,13 +177,13 @@ function FormComponent({
             )}
 
             {rating > 0 && (
-                <p className="text-base text-[#262627]/50">
+                <p className="form-field-helper text-base text-[#262627]/50">
                     You selected: {rating} / {maxRating}
                 </p>
             )}
 
             {helperText && (
-                <p className={`text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

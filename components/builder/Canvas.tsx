@@ -494,7 +494,7 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
 
                 {/* Form Content */}
                 {/* Form Content */}
-                <div className="relative h-[650px] bg-base-100 overflow-hidden">
+                <div className="relative h-[650px] bg-base-100 overflow-hidden form-preview-container">
                     {formStyle === 'classic' ? (
                         <div className="h-full overflow-y-auto">
                             <ClassicRenderer

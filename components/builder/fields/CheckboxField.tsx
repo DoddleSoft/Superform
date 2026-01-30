@@ -93,7 +93,7 @@ function FormComponent({
         <div className="flex flex-col gap-2 w-full">
             <div
                 className={`
-                    flex items-center gap-3 p-4 rounded border border-[#262627]/30 bg-opacity-50 cursor-pointer overflow-hidden transition-all
+                    form-field-option flex items-center gap-3 p-4 rounded border border-[#262627]/30 bg-opacity-50 cursor-pointer overflow-hidden transition-all
                     hover:bg-[#0445AF]/5 hover:border-[#0445AF]
                     ${value ? "bg-[#0445AF]/10 border-[#0445AF] ring-1 ring-[#0445AF]" : "bg-white/40"}
                     ${error ? "border-error" : ""}
@@ -109,19 +109,19 @@ function FormComponent({
                 }}
             >
                 <div className={`
-                    w-6 h-6 flex items-center justify-center border rounded text-xs
+                    form-field-option-key w-6 h-6 flex items-center justify-center border rounded text-xs
                     ${value ? "bg-[#0445AF] text-white border-[#0445AF]" : "bg-white border-[#262627]/30 text-[#262627]"}
                 `}>
                     {value && <LuCheck />}
                 </div>
 
                 <div className="flex flex-col">
-                    <span className={`text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
+                    <span className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
                     </span>
                     {helperText && (
-                        <span className={`text-base text-[#262627]/60 ${error ? "text-error" : ""}`}>
+                        <span className={`form-field-helper text-base text-[#262627]/60 ${error ? "text-error" : ""}`}>
                             {helperText}
                         </span>
                     )}

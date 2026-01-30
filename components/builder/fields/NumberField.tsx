@@ -97,13 +97,13 @@ function FormComponent({
 
     return (
         <div className="flex flex-col gap-2 w-full">
-            <label className={`text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
+            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
             <input
                 type="number"
-                className={`w-full bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 ${error ? "border-error" : ""}`}
+                className={`form-field-input w-full bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 ${error ? "border-error" : ""}`}
                 placeholder={placeholder}
                 onChange={(e) => {
                     setValue(e.target.value);
@@ -121,7 +121,7 @@ function FormComponent({
                 value={value}
             />
             {helperText && (
-                <p className={`text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

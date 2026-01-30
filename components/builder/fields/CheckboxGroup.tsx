@@ -160,8 +160,8 @@ function FormComponent({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <label className={`text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <MdCheckBox className="w-6 h-6" />
+            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
+                <MdCheckBox className="form-field-icon w-6 h-6" />
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
@@ -177,7 +177,7 @@ function FormComponent({
                             key={option}
                             onClick={() => !isDisabled && toggleOption(option)}
                             className={`
-                                flex items-center gap-3 p-3 rounded-lg border overflow-hidden transition-all
+                                form-field-option flex items-center gap-3 p-3 rounded-lg border overflow-hidden transition-all
                                 ${isDisabled 
                                     ? "opacity-50 cursor-not-allowed" 
                                     : "cursor-pointer hover:bg-[#0445AF]/5 hover:border-[#0445AF]"}
@@ -188,7 +188,7 @@ function FormComponent({
                             `}
                         >
                             <div className={`
-                                w-7 h-7 flex items-center justify-center border rounded text-sm font-semibold transition-all
+                                form-field-option-key w-7 h-7 flex items-center justify-center border rounded text-sm font-semibold transition-all
                                 ${isSelected 
                                     ? "bg-[#0445AF] text-white border-[#0445AF]" 
                                     : "bg-white border-[#262627]/30 text-[#262627]"}
@@ -202,10 +202,10 @@ function FormComponent({
             </div>
 
             {selectionHint && (
-                <p className="text-base text-[#262627]/50">{selectionHint}</p>
+                <p className="form-field-helper text-base text-[#262627]/50">{selectionHint}</p>
             )}
             {helperText && (
-                <p className={`text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

@@ -48,7 +48,7 @@ export function ClassicRenderer({
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: sectionIndex * 0.1 }}
-                                className="bg-base-100 rounded-2xl shadow-xl p-8 md:p-12"
+                                className="form-classic-card bg-base-100 rounded-2xl shadow-xl p-8 md:p-12"
                             >
                                 {/* Section Header */}
                                 <div className="mb-8">
@@ -57,11 +57,11 @@ export function ClassicRenderer({
                                             Section {sectionIndex + 1}
                                         </span>
                                     </div>
-                                    <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                                    <h2 className="form-section-title text-2xl md:text-3xl font-bold mb-2">
                                         {section.title}
                                     </h2>
                                     {section.description && (
-                                        <p className="text-base-content/60">
+                                        <p className="form-section-description text-base-content/60">
                                             {section.description}
                                         </p>
                                     )}

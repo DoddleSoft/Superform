@@ -89,12 +89,12 @@ function FormComponent({
 
     return (
         <div className={`flex flex-col gap-2 w-full ${alignStyles[align]}`}>
-            {level === "h1" && <h1 className={`text-[#262627] ${headingStyles.h1}`}>{title}</h1>}
-            {level === "h2" && <h2 className={`text-[#262627] ${headingStyles.h2}`}>{title}</h2>}
-            {level === "h3" && <h3 className={`text-[#262627] ${headingStyles.h3}`}>{title}</h3>}
-            {level === "h4" && <h4 className={`text-[#262627] ${headingStyles.h4}`}>{title}</h4>}
+            {level === "h1" && <h1 className={`form-section-title text-[#262627] ${headingStyles.h1}`}>{title}</h1>}
+            {level === "h2" && <h2 className={`form-section-title text-[#262627] ${headingStyles.h2}`}>{title}</h2>}
+            {level === "h3" && <h3 className={`form-section-title text-[#262627] ${headingStyles.h3}`}>{title}</h3>}
+            {level === "h4" && <h4 className={`form-section-title text-[#262627] ${headingStyles.h4}`}>{title}</h4>}
             {subtitle && (
-                <p className="text-lg text-[#262627]/70">{subtitle}</p>
+                <p className="form-section-description text-lg text-[#262627]/70">{subtitle}</p>
             )}
         </div>
     );

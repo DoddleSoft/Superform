@@ -53,7 +53,9 @@ export function TypeformRenderer({
         const container = scrollContainerRef.current;
         if (!container) return;
 
-        const isScrollable = container.scrollHeight > container.clientHeight;
+        // More robust scrollability check with a minimum threshold
+        const scrollableAmount = container.scrollHeight - container.clientHeight;
+        const isScrollable = scrollableAmount > 20; // Only consider scrollable if more than 20px to scroll
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
         
         setShowScrollIndicator(isScrollable && !isAtBottom);
@@ -66,8 +68,12 @@ export function TypeformRenderer({
         if (container) {
             container.scrollTop = 0;
         }
-        // Small delay to ensure content is rendered before checking
-        const timer = setTimeout(checkScrollState, 100);
+        // Hide indicator initially, only show after confirming scroll is needed
+        setShowScrollIndicator(false);
+        setHasScrolledToBottom(true); // Assume no scroll needed initially
+        
+        // Check after animation completes to avoid flash
+        const timer = setTimeout(checkScrollState, 650);
         return () => clearTimeout(timer);
     }, [currentSectionIndex, checkScrollState]);
 
@@ -197,20 +203,12 @@ export function TypeformRenderer({
                         >
                             {/* Section Question / Header */}
                             <div>
-                                <div className="flex items-baseline gap-2 mb-4">
-                                    <span className="text-[#0445AF] font-medium text-lg">
-                                        {currentSectionIndex + 1}
-                                        <span className="ml-1 text-base opacity-50">/</span>
-                                        <span className="ml-1 text-base opacity-50">{totalSections}</span>
-                                        <span className="ml-2">→</span>
-                                    </span>
-                                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#262627] leading-tight">
-                                        {currentSection.title}
-                                    </h1>
-                                </div>
+                                <h1 className="form-section-title text-3xl md:text-4xl lg:text-5xl font-light text-[#262627] leading-tight mb-4">
+                                    {currentSection.title}
+                                </h1>
 
                                 {currentSection.description && (
-                                    <p className="text-xl md:text-2xl font-light text-[#262627]/70 mt-2 pl-24 md:pl-0">
+                                    <p className="form-section-description text-xl md:text-2xl font-light text-[#262627]/70 mt-2 pl-24 md:pl-0">
                                         {currentSection.description}
                                     </p>
                                 )}
