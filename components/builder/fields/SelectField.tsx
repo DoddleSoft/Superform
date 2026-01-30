@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { RxDropdownMenu } from "react-icons/rx";
 import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
+import { LuCheck } from "react-icons/lu";
 
 const type: FormElementType = FormElementType.SELECT;
 
@@ -99,39 +100,46 @@ function FormComponent({
     const { label, required, helperText, placeholder, options } = elementInstance.extraAttributes || extraAttributes;
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <label className={`label-text ${error ? "text-error" : ""}`}>
+        <div className="flex flex-col gap-4 w-full">
+            <label className={`text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
                 {label}
-                {required && <span className="text-error">*</span>}
+                {required && <span className="text-error ml-1">*</span>}
             </label>
-            <select
-                className={`select select-bordered w-full ${error ? "select-error" : ""}`}
-                value={value}
-                onChange={(e) => {
-                    setValue(e.target.value);
-                    if (!submitValue) return;
-                    const valid = SelectFieldFormElement.validate(elementInstance, e.target.value);
-                    setError(!valid);
-                    submitValue(elementInstance.id, e.target.value);
-                }}
-                onBlur={(e) => {
-                    if (!submitValue) return;
-                    const valid = SelectFieldFormElement.validate(elementInstance, e.target.value);
-                    setError(!valid);
-                    submitValue(elementInstance.id, e.target.value);
-                }}
-            >
-                <option value="" disabled>
-                    {placeholder}
-                </option>
-                {options.map((option) => (
-                    <option key={option} value={option}>
-                        {option}
-                    </option>
-                ))}
-            </select>
+
+            <div className="flex flex-col gap-2">
+                {options.map((option, index) => {
+                    const isSelected = value === option;
+                    const keyChar = String.fromCharCode(65 + index); // A, B, C...
+
+                    return (
+                        <div
+                            key={option}
+                            onClick={() => {
+                                setValue(option);
+                                setError(false);
+                                if (submitValue) submitValue(elementInstance.id, option);
+                            }}
+                            className={`
+                                flex items-center gap-3 p-2 rounded border border-[#262627]/30 bg-opacity-50 cursor-pointer overflow-hidden transition-all
+                                hover:bg-[#0445AF]/5 hover:border-[#0445AF]
+                                ${isSelected ? "bg-[#0445AF]/10 border-[#0445AF] ring-1 ring-[#0445AF]" : "bg-white/40"}
+                            `}
+                        >
+                            <div className={`
+                                w-6 h-6 flex items-center justify-center border rounded text-xs font-semibold
+                                ${isSelected ? "bg-[#0445AF] text-white border-[#0445AF]" : "bg-white border-[#262627]/30 text-[#262627]"}
+                            `}>
+                                {keyChar}
+                            </div>
+                            <span className="text-lg text-[#262627]">{option}</span>
+                            {isSelected && <LuCheck className="ml-auto text-[#0445AF]" />}
+                        </div>
+                    );
+                })}
+            </div>
+
             {helperText && (
-                <p className={`text-[0.8rem] text-base-content/70 ${error && "text-error"}`}>
+                <p className={`text-lg text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

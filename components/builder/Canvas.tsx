@@ -9,6 +9,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { FormElements } from "./FormElements";
 import { LuPlus, LuTrash2, LuSmartphone, LuTablet, LuMonitor, LuChevronRight, LuCheck } from "react-icons/lu";
 import { motion, AnimatePresence, elementVariants } from "@/lib/animations";
+import { ClassicRenderer } from "@/components/renderers/ClassicRenderer";
+import { TypeformRenderer } from "@/components/renderers/TypeformRenderer";
 
 // Canvas tab configuration
 const CANVAS_TABS: { id: CanvasTab; label: string }[] = [
@@ -26,17 +28,17 @@ const DEVICE_SIZES: { id: DeviceType; label: string; icon: typeof LuSmartphone; 
 ];
 
 export function Canvas() {
-    const { 
-        sections, 
-        addSection, 
-        setSelectedElement, 
+    const {
+        sections,
+        addSection,
+        setSelectedElement,
         setSelectedSection,
         selectedSection,
         canvasTab,
         setCanvasTab,
         formStyle,
     } = useFormBuilder();
-    
+
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
@@ -77,15 +79,15 @@ export function Canvas() {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Canvas Tabs */}
-            <div className="bg-base-100 border-b border-base-200 px-4 py-2 flex justify-center shrink-0">
+            <div className="bg-base-100 border-b border-base-200 px-4 py-2 flex items-center justify-center shrink-0 relative">
                 <div className="inline-flex bg-base-200 rounded-lg p-1 gap-1">
                     {CANVAS_TABS.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setCanvasTab(tab.id)}
                             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all
-                                ${canvasTab === tab.id 
-                                    ? 'bg-base-100 text-base-content shadow-sm' 
+                                ${canvasTab === tab.id
+                                    ? 'bg-base-100 text-base-content shadow-sm'
                                     : 'text-base-content/60 hover:text-base-content hover:bg-base-100/50'
                                 }`}
                         >
@@ -93,6 +95,29 @@ export function Canvas() {
                         </button>
                     ))}
                 </div>
+
+                {/* Device Switcher - Only for Design Tab */}
+                {canvasTab === 'design' && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center bg-base-200 rounded-lg p-1 gap-1">
+                        {DEVICE_SIZES.map((device) => {
+                            const Icon = device.icon;
+                            return (
+                                <button
+                                    key={device.id}
+                                    onClick={() => setPreviewDevice(device.id)}
+                                    className={`btn btn-sm btn-ghost h-8 min-h-0 px-2 gap-2 ${previewDevice === device.id
+                                        ? 'bg-white shadow-sm text-base-content'
+                                        : 'text-base-content/60 hover:bg-base-100/50'
+                                        }`}
+                                    title={device.label}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    <span className="hidden lg:inline text-xs">{device.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Canvas Content */}
@@ -124,9 +149,9 @@ export function Canvas() {
                     >
                         <AnimatePresence mode="popLayout">
                             {sections.map((section, index) => (
-                                <SectionCard 
-                                    key={section.id} 
-                                    section={section} 
+                                <SectionCard
+                                    key={section.id}
+                                    section={section}
                                     index={index}
                                     isSelected={selectedSection?.id === section.id}
                                     onAddSectionAbove={() => handleAddSection(index)}
@@ -139,9 +164,9 @@ export function Canvas() {
 
                 {/* Design Tab Content - Form Preview */}
                 {canvasTab === 'design' && (
-                    <FormPreview 
-                        sections={sections} 
-                        formStyle={formStyle} 
+                    <FormPreview
+                        sections={sections}
+                        formStyle={formStyle}
                         previewDevice={previewDevice}
                         setPreviewDevice={setPreviewDevice}
                     />
@@ -168,28 +193,28 @@ export function Canvas() {
     );
 }
 
-function SectionCard({ 
-    section, 
+function SectionCard({
+    section,
     index,
     isSelected,
     onAddSectionAbove,
-    onAddSectionBelow 
-}: { 
-    section: FormSection; 
+    onAddSectionBelow
+}: {
+    section: FormSection;
     index: number;
     isSelected: boolean;
     onAddSectionAbove: () => void;
     onAddSectionBelow: () => void;
 }) {
-    const { 
-        setSelectedElement, 
-        setSelectedSection, 
+    const {
+        setSelectedElement,
+        setSelectedSection,
         selectedElement,
         removeSection,
         sections
     } = useFormBuilder();
     const [isHovering, setIsHovering] = useState(false);
-    
+
     const { setNodeRef, isOver } = useDroppable({
         id: `section-droppable-${section.id}`,
         data: {
@@ -257,7 +282,7 @@ function SectionCard({
                             {section.title}
                         </span>
                     </div>
-                    
+
                     {/* Section Actions */}
                     <div className="flex items-center gap-1 shrink-0">
                         {sections.length > 1 && (
@@ -281,15 +306,15 @@ function SectionCard({
                             <p className="text-sm">Drag and drop elements here</p>
                         </div>
                     ) : (
-                        <SortableContext 
-                            items={section.elements.map((el) => el.id)} 
+                        <SortableContext
+                            items={section.elements.map((el) => el.id)}
                             strategy={verticalListSortingStrategy}
                         >
                             <div className="flex flex-col gap-3">
                                 {section.elements.map((element) => (
-                                    <SortableElement 
-                                        key={element.id} 
-                                        element={element} 
+                                    <SortableElement
+                                        key={element.id}
+                                        element={element}
                                         sectionId={section.id}
                                     />
                                 ))}
@@ -420,7 +445,7 @@ interface FormPreviewProps {
 function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: FormPreviewProps) {
     const [previewSection, setPreviewSection] = useState(0);
     const deviceConfig = DEVICE_SIZES.find(d => d.id === previewDevice) || DEVICE_SIZES[2];
-    
+
     const currentSection = sections[previewSection];
     const isFirstSection = previewSection === 0;
     const isLastSection = previewSection === sections.length - 1;
@@ -443,33 +468,13 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
 
     return (
         <div className="w-full flex flex-col items-center z-10 pb-8">
-            {/* Device Toggle */}
-            <div className="bg-base-100 rounded-lg shadow-sm border border-base-200 p-1 flex gap-1 mb-6">
-                {DEVICE_SIZES.map((device) => {
-                    const Icon = device.icon;
-                    return (
-                        <button
-                            key={device.id}
-                            onClick={() => setPreviewDevice(device.id)}
-                            className={`btn btn-sm gap-2 ${
-                                previewDevice === device.id
-                                    ? 'btn-primary'
-                                    : 'btn-ghost'
-                            }`}
-                            title={device.label}
-                        >
-                            <Icon className="w-4 h-4" />
-                            <span className="hidden sm:inline">{device.label}</span>
-                        </button>
-                    );
-                })}
-            </div>
+
 
             {/* Device Frame */}
             <motion.div
                 layout
                 className="bg-base-100 rounded-2xl shadow-2xl overflow-hidden border-4 border-base-300"
-                style={{ 
+                style={{
                     width: Math.min(deviceConfig.width, typeof window !== 'undefined' ? window.innerWidth - 100 : deviceConfig.width),
                     maxWidth: '100%',
                 }}
@@ -488,18 +493,38 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
                 </div>
 
                 {/* Form Content */}
-                <div className="overflow-y-auto max-h-[60vh]">
+                {/* Form Content */}
+                <div className="relative h-[650px] bg-base-100 overflow-hidden">
                     {formStyle === 'classic' ? (
-                        <ClassicPreview sections={sections} />
+                        <div className="h-full overflow-y-auto">
+                            <ClassicRenderer
+                                sections={sections}
+                                formValues={{ current: {} }}
+                                formErrors={{ current: {} }}
+                                renderKey={0}
+                                pending={false}
+                                submitValue={() => { }}
+                                handleSubmit={() => { }}
+                                validateAllSections={() => true}
+                                setRenderKey={() => { }}
+                            />
+                        </div>
                     ) : (
-                        <TypeformPreview 
-                            section={currentSection} 
-                            sectionIndex={previewSection}
-                            totalSections={sections.length}
-                            isFirst={isFirstSection}
-                            isLast={isLastSection}
-                            onNext={() => !isLastSection && setPreviewSection(prev => prev + 1)}
-                            onPrev={() => !isFirstSection && setPreviewSection(prev => prev - 1)}
+                        <TypeformRenderer
+                            sections={sections}
+                            formValues={{ current: {} }}
+                            formErrors={{ current: {} }}
+                            renderKey={0}
+                            pending={false}
+                            submitValue={() => { }}
+                            handleSubmit={() => { }}
+                            validateSection={() => true}
+                            setRenderKey={() => { }}
+                            currentSectionIndex={
+                                // If current section is deleted/out of bounds, fallback to 0
+                                sections[previewSection] ? previewSection : 0
+                            }
+                            onSectionChange={setPreviewSection}
                         />
                     )}
                 </div>
@@ -511,220 +536,6 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
                     {formStyle === 'classic' ? 'Classic' : 'Typeform'} style
                 </span>
             </div>
-        </div>
-    );
-}
-
-// Classic style preview - All sections visible
-function ClassicPreview({ sections }: { sections: FormSection[] }) {
-    return (
-        <div className="bg-gradient-to-br from-base-200 to-base-300 py-6 px-4">
-            <div className="space-y-6">
-                {sections.map((section, sectionIndex) => (
-                    <div
-                        key={section.id}
-                        className="bg-base-100 rounded-xl shadow-lg p-6"
-                    >
-                        {/* Section Header */}
-                        <div className="mb-6">
-                            <span className="text-xs font-bold text-primary/60 uppercase tracking-wider">
-                                Section {sectionIndex + 1}
-                            </span>
-                            <h2 className="text-xl font-bold mt-1">
-                                {section.title}
-                            </h2>
-                            {section.description && (
-                                <p className="text-sm text-base-content/60 mt-1">
-                                    {section.description}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Fields */}
-                        <div className="space-y-4">
-                            {section.elements.map((element) => (
-                                <PreviewField key={element.id} element={element} />
-                            ))}
-                        </div>
-                    </div>
-                ))}
-
-                {/* Submit Button */}
-                <div className="flex justify-center pt-2">
-                    <button className="btn btn-primary gap-2 pointer-events-none">
-                        Submit
-                        <LuCheck className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Typeform style preview - One section at a time
-function TypeformPreview({ 
-    section, 
-    sectionIndex,
-    totalSections,
-    isFirst, 
-    isLast,
-    onNext,
-    onPrev,
-}: { 
-    section: FormSection;
-    sectionIndex: number;
-    totalSections: number;
-    isFirst: boolean;
-    isLast: boolean;
-    onNext: () => void;
-    onPrev: () => void;
-}) {
-    return (
-        <div className="min-h-[400px] flex flex-col bg-gradient-to-br from-base-200 to-base-300">
-            {/* Progress Bar */}
-            <div className="h-1 bg-base-300">
-                <div 
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${((sectionIndex + 1) / totalSections) * 100}%` }}
-                />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="w-full max-w-md">
-                    {/* Section Number */}
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-sm font-bold text-primary">
-                            {sectionIndex + 1}
-                        </span>
-                        <LuChevronRight className="w-4 h-4 text-primary" />
-                    </div>
-
-                    {/* Section Title */}
-                    <h2 className="text-2xl font-bold mb-2">
-                        {section.title}
-                    </h2>
-                    {section.description && (
-                        <p className="text-base-content/60 mb-6">
-                            {section.description}
-                        </p>
-                    )}
-
-                    {/* Fields */}
-                    <div className="space-y-4">
-                        {section.elements.map((element) => (
-                            <PreviewField key={element.id} element={element} />
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="p-4 bg-base-100 border-t border-base-200 flex items-center justify-between">
-                <button 
-                    onClick={onPrev}
-                    className={`btn btn-ghost btn-sm gap-1 ${isFirst ? 'invisible' : ''}`}
-                >
-                    <LuChevronRight className="w-4 h-4 rotate-180" />
-                    Back
-                </button>
-
-                {/* Dots */}
-                <div className="flex gap-1.5">
-                    {Array.from({ length: totalSections }).map((_, i) => (
-                        <div
-                            key={i}
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                                i === sectionIndex
-                                    ? 'bg-primary'
-                                    : i < sectionIndex
-                                        ? 'bg-primary/50'
-                                        : 'bg-base-300'
-                            }`}
-                        />
-                    ))}
-                </div>
-
-                <button
-                    onClick={onNext}
-                    className="btn btn-primary btn-sm gap-1"
-                >
-                    {isLast ? 'Submit' : 'Next'}
-                    {isLast ? <LuCheck className="w-4 h-4" /> : <LuChevronRight className="w-4 h-4" />}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// Preview field component - renders a read-only version of form fields
-function PreviewField({ element }: { element: FormElementInstance }) {
-    const label = element.extraAttributes?.label || FormElements[element.type]?.label || 'Field';
-    const required = element.extraAttributes?.required;
-    const placeholder = element.extraAttributes?.placeholder || '';
-    const helperText = element.extraAttributes?.helperText;
-
-    return (
-        <div className="space-y-1.5">
-            <label className="text-sm font-medium flex items-center gap-1">
-                {label}
-                {required && <span className="text-error">*</span>}
-            </label>
-            
-            {/* Render different field types */}
-            {element.type === 'TextField' && (
-                <input
-                    type="text"
-                    placeholder={placeholder}
-                    className="input input-bordered w-full input-sm"
-                    disabled
-                />
-            )}
-            {element.type === 'TextArea' && (
-                <textarea
-                    placeholder={placeholder}
-                    className="textarea textarea-bordered w-full textarea-sm"
-                    rows={3}
-                    disabled
-                />
-            )}
-            {element.type === 'Number' && (
-                <input
-                    type="number"
-                    placeholder={placeholder}
-                    className="input input-bordered w-full input-sm"
-                    disabled
-                />
-            )}
-            {element.type === 'Date' && (
-                <input
-                    type="date"
-                    className="input input-bordered w-full input-sm"
-                    disabled
-                />
-            )}
-            {element.type === 'Checkbox' && (
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm"
-                        disabled
-                    />
-                    <span className="text-sm text-base-content/70">{placeholder || 'Check this option'}</span>
-                </div>
-            )}
-            {element.type === 'Select' && (
-                <select className="select select-bordered w-full select-sm" disabled>
-                    <option>{placeholder || 'Select an option'}</option>
-                    {element.extraAttributes?.options?.map((opt: string, i: number) => (
-                        <option key={i}>{opt}</option>
-                    ))}
-                </select>
-            )}
-            
-            {helperText && (
-                <p className="text-xs text-base-content/50">{helperText}</p>
-            )}
         </div>
     );
 }

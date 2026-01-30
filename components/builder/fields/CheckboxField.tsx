@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { IoMdCheckbox } from "react-icons/io";
+import { LuCheck } from "react-icons/lu";
 
 const type: FormElementType = FormElementType.CHECKBOX;
 
@@ -89,32 +90,42 @@ function FormComponent({
     const id = `checkbox-${element.id}`;
 
     return (
-        <div className="flex items-start gap-2 w-full">
-            <input
-                type="checkbox"
-                id={id}
-                className={`checkbox checkbox-primary ${error ? "checkbox-error" : ""}`}
-                checked={value}
-                onChange={(e) => {
-                    const checked = e.target.checked;
-                    setValue(checked);
+        <div className="flex flex-col gap-2 w-full">
+            <div
+                className={`
+                    flex items-center gap-3 p-4 rounded border border-[#262627]/30 bg-opacity-50 cursor-pointer overflow-hidden transition-all
+                    hover:bg-[#0445AF]/5 hover:border-[#0445AF]
+                    ${value ? "bg-[#0445AF]/10 border-[#0445AF] ring-1 ring-[#0445AF]" : "bg-white/40"}
+                    ${error ? "border-error" : ""}
+                `}
+                onClick={() => {
+                    const newValue = !value;
+                    setValue(newValue);
                     if (!submitValue) return;
-                    const stringValue = checked ? "true" : "false";
+                    const stringValue = newValue ? "true" : "false";
                     const valid = CheckboxFieldFormElement.validate(elementInstance, stringValue);
                     setError(!valid);
                     submitValue(elementInstance.id, stringValue);
                 }}
-            />
-            <div className="flex flex-col gap-1">
-                <label htmlFor={id} className={`label-text cursor-pointer ${error ? "text-error" : ""}`}>
-                    {label}
-                    {required && <span className="text-error">*</span>}
-                </label>
-                {helperText && (
-                    <p className={`text-[0.8rem] text-base-content/70 ${error && "text-error"}`}>
-                        {helperText}
-                    </p>
-                )}
+            >
+                <div className={`
+                    w-6 h-6 flex items-center justify-center border rounded text-xs
+                    ${value ? "bg-[#0445AF] text-white border-[#0445AF]" : "bg-white border-[#262627]/30 text-[#262627]"}
+                `}>
+                    {value && <LuCheck />}
+                </div>
+
+                <div className="flex flex-col">
+                    <span className={`text-xl md:text-2xl font-normal text-[#262627] ${error ? "text-error" : ""}`}>
+                        {label}
+                        {required && <span className="text-error ml-1">*</span>}
+                    </span>
+                    {helperText && (
+                        <span className={`text-base text-[#262627]/60 ${error ? "text-error" : ""}`}>
+                            {helperText}
+                        </span>
+                    )}
+                </div>
             </div>
         </div>
     );

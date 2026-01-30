@@ -6,6 +6,8 @@ import { useRef, useState, useTransition, useCallback, useEffect, useMemo } from
 import { submitForm, savePartialSubmission } from "@/actions/form";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck } from "react-icons/lu";
+import { ClassicRenderer } from "./renderers/ClassicRenderer";
+import { TypeformRenderer } from "./renderers/TypeformRenderer";
 
 // Generate a unique session ID for this form submission attempt
 function generateSessionId(): string {
@@ -34,7 +36,7 @@ export function FormSubmitComponent({
     const [submitted, setSubmitted] = useState(false);
     const [pending, startTransition] = useTransition();
     const [direction, setDirection] = useState(0); // -1 for back, 1 for forward
-    
+
     // Session ID for tracking partial submissions
     const sessionId = useRef<string>(generateSessionId());
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,7 +58,7 @@ export function FormSubmitComponent({
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
-        
+
         saveTimeoutRef.current = setTimeout(async () => {
             try {
                 // Only save if there's some data
@@ -113,7 +115,7 @@ export function FormSubmitComponent({
     // Validate current section
     const validateCurrentSection = useCallback(() => {
         if (!currentSection) return true;
-        
+
         formErrors.current = {};
         let isValid = true;
 
@@ -189,9 +191,9 @@ export function FormSubmitComponent({
                 const jsonContent = JSON.stringify(formValues.current);
                 // Pass version and content snapshot for response integrity
                 await submitForm(
-                    formId, 
-                    jsonContent, 
-                    sessionId.current, 
+                    formId,
+                    jsonContent,
+                    sessionId.current,
                     totalSections,
                     version,
                     content // Store the form content at time of submission
@@ -271,7 +273,7 @@ export function FormSubmitComponent({
     // Classic style - One page with all sections visible
     if (style === 'classic') {
         return (
-            <ClassicFormRenderer
+            <ClassicRenderer
                 sections={sections}
                 formValues={formValues}
                 formErrors={formErrors}
@@ -285,224 +287,18 @@ export function FormSubmitComponent({
         );
     }
 
-    // Typeform style - Step-by-step with slide animations (default/original behavior)
+    // Typeform style - Step-by-step
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-base-200 to-base-300">
-            {/* Progress Bar */}
-            <div className="fixed top-0 left-0 right-0 z-50">
-                <div className="h-1 bg-base-300">
-                    <motion.div
-                        className="h-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${((currentSectionIndex + 1) / totalSections) * 100}%` }}
-                        transition={{ duration: 0.3 }}
-                    />
-                </div>
-            </div>
-
-            {/* Section Counter */}
-            <div className="fixed top-4 right-4 z-50">
-                <span className="text-sm text-base-content/50">
-                    {currentSectionIndex + 1} / {totalSections}
-                </span>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex items-center justify-center p-4 pt-12">
-                <div className="w-full max-w-2xl">
-                    <AnimatePresence mode="wait" custom={direction}>
-                        <motion.div
-                            key={currentSection?.id || currentSectionIndex}
-                            custom={direction}
-                            variants={slideVariants}
-                            initial="enter"
-                            animate="center"
-                            exit="exit"
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="bg-base-100 rounded-2xl shadow-xl p-8 md:p-12"
-                        >
-                            {/* Section Header */}
-                            {currentSection && (
-                                <>
-                                    <div className="mb-8">
-                                        <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                                            {currentSection.title}
-                                        </h2>
-                                        {currentSection.description && (
-                                            <p className="text-base-content/60">
-                                                {currentSection.description}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Form Fields */}
-                                    <div key={renderKey} className="space-y-6">
-                                        {currentSection.elements.map((element) => {
-                                            const FormElement = FormElements[element.type].formComponent;
-                                            return (
-                                                <FormElement
-                                                    key={element.id}
-                                                    element={element}
-                                                    submitValue={submitValue}
-                                                    isInvalid={formErrors.current[element.id]}
-                                                    defaultValue={formValues.current[element.id]}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </div>
-
-            {/* Navigation Footer */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-base-100/80 backdrop-blur-sm border-t border-base-200">
-                <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <button
-                        className={`btn btn-ghost gap-2 ${isFirstSection ? 'invisible' : ''}`}
-                        onClick={handlePrevious}
-                        disabled={isFirstSection}
-                    >
-                        <LuChevronLeft className="w-4 h-4" />
-                        Back
-                    </button>
-
-                    <div className="flex gap-1">
-                        {sections.map((_, index) => (
-                            <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full transition-all ${
-                                    index === currentSectionIndex
-                                        ? 'bg-primary w-6'
-                                        : index < currentSectionIndex
-                                        ? 'bg-primary/50'
-                                        : 'bg-base-300'
-                                }`}
-                            />
-                        ))}
-                    </div>
-
-                    {isLastSection ? (
-                        <button
-                            className="btn btn-primary gap-2"
-                            onClick={handleSubmit}
-                            disabled={pending}
-                        >
-                            {pending ? "Submitting..." : "Submit"}
-                            <LuCheck className="w-4 h-4" />
-                        </button>
-                    ) : (
-                        <button
-                            className="btn btn-primary gap-2"
-                            onClick={handleNext}
-                        >
-                            Next
-                            <LuChevronRight className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Classic Form Renderer - One page with all sections visible vertically
-interface ClassicFormRendererProps {
-    sections: FormSection[];
-    formValues: React.MutableRefObject<{ [key: string]: string }>;
-    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
-    renderKey: number;
-    pending: boolean;
-    submitValue: (key: string, value: string) => void;
-    handleSubmit: () => void;
-    validateAllSections: () => boolean;
-    setRenderKey: (key: number) => void;
-}
-
-function ClassicFormRenderer({
-    sections,
-    formValues,
-    formErrors,
-    renderKey,
-    pending,
-    submitValue,
-    handleSubmit,
-    validateAllSections,
-    setRenderKey,
-}: ClassicFormRendererProps) {
-    const onSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!validateAllSections()) {
-            setRenderKey(new Date().getTime());
-            return;
-        }
-        handleSubmit();
-    };
-
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-base-200 to-base-300 py-8 px-4">
-            <div className="max-w-2xl mx-auto">
-                <form onSubmit={onSubmit}>
-                    <div className="space-y-8" key={renderKey}>
-                        {sections.map((section, sectionIndex) => (
-                            <motion.div
-                                key={section.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: sectionIndex * 0.1 }}
-                                className="bg-base-100 rounded-2xl shadow-xl p-8 md:p-12"
-                            >
-                                {/* Section Header */}
-                                <div className="mb-8">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-xs font-bold text-primary/60 uppercase tracking-wider">
-                                            Section {sectionIndex + 1}
-                                        </span>
-                                    </div>
-                                    <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                                        {section.title}
-                                    </h2>
-                                    {section.description && (
-                                        <p className="text-base-content/60">
-                                            {section.description}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Form Fields */}
-                                <div className="space-y-6">
-                                    {section.elements.map((element) => {
-                                        const FormElement = FormElements[element.type].formComponent;
-                                        return (
-                                            <FormElement
-                                                key={element.id}
-                                                element={element}
-                                                submitValue={submitValue}
-                                                isInvalid={formErrors.current[element.id]}
-                                                defaultValue={formValues.current[element.id]}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-lg gap-2 px-8"
-                            disabled={pending}
-                        >
-                            {pending ? "Submitting..." : "Submit"}
-                            <LuCheck className="w-5 h-5" />
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <TypeformRenderer
+            sections={sections}
+            formValues={formValues}
+            formErrors={formErrors}
+            renderKey={renderKey}
+            pending={pending}
+            submitValue={submitValue}
+            handleSubmit={handleSubmit}
+            validateSection={validateCurrentSection}
+            setRenderKey={setRenderKey}
+        />
     );
 }
