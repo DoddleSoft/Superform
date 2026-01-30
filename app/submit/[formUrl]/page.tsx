@@ -14,5 +14,12 @@ export default async function SubmitPage({
         notFound();
     }
 
-    return <FormSubmitComponent formUrl={formUrl} content={form.content} formId={form.id} />;
+    return (
+        <FormSubmitComponent 
+            formUrl={formUrl} 
+            content={form.content} 
+            formId={form.id} 
+            style={form.style ?? 'classic'} 
+        />
+    );
 }

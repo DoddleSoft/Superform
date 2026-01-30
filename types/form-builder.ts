@@ -7,6 +7,14 @@ export enum FormElementType {
     SELECT = "Select",
 }
 
+// Form display styles
+// 'classic' - One page sectioned form (all sections visible vertically)
+// 'typeform' - Typeform-like step-by-step experience with slide animations
+export type FormStyle = 'classic' | 'typeform';
+
+// Canvas tabs in builder
+export type CanvasTab = 'form' | 'design' | 'logic';
+
 export interface FormElement {
     id: string;
     type: FormElementType;
@@ -57,6 +65,7 @@ export interface Form {
     description: string | null;
     content: FormContent; // Changed from FormElementInstance[] to FormContent (Section[])
     published: boolean;
+    style: FormStyle; // Form display style
     share_url: string | null;
     created_at: string;
     updated_at: string;

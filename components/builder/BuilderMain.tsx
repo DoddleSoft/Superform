@@ -14,7 +14,7 @@ import { LeftPanel } from "./LeftPanel";
 import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
-import { FormElementInstance, FormElementType, FormSection, createSection } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle } from "@/types/form-builder";
 import { FormSubmission } from "@/types/submission";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -26,7 +26,7 @@ import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
 
 export function BuilderMain({ form, submissions }: { form: any, submissions: FormSubmission[] }) {
-    const { sections, addElement, setSections, setFormMetadata, formId, addSection, moveElement } = useFormBuilder();
+    const { sections, addElement, setSections, setFormMetadata, setFormStyle, formId, addSection, moveElement } = useFormBuilder();
     const [activeSidebarElement, setActiveSidebarElement] = useState<FormElementType | null>(null);
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
     const [activeElementSectionId, setActiveElementSectionId] = useState<string | null>(null);
@@ -59,7 +59,8 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 const defaultSection = createSection(crypto.randomUUID(), "Section 1");
                 setSections([defaultSection]);
             }
-            setFormMetadata(form.id, form.published, form.share_url);
+            // Set form metadata including style
+            setFormMetadata(form.id, form.published, form.share_url, form.style || 'classic');
         }
     }, [form, setSections, setFormMetadata]);
 

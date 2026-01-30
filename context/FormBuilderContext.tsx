@@ -9,7 +9,7 @@ import {
     SetStateAction,
     useCallback,
 } from "react";
-import { FormElementInstance, FormSection, FormContent, createSection } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab } from "@/types/form-builder";
 
 type FormBuilderContextType = {
     // Section management
@@ -39,7 +39,15 @@ type FormBuilderContextType = {
     formId: string | null;
     isPublished: boolean;
     shareUrl: string | null;
-    setFormMetadata: (id: string, published: boolean, shareUrl: string | null) => void;
+    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle) => void;
+    
+    // Form Style
+    formStyle: FormStyle;
+    setFormStyle: Dispatch<SetStateAction<FormStyle>>;
+    
+    // Canvas Tab (form | design | logic)
+    canvasTab: CanvasTab;
+    setCanvasTab: Dispatch<SetStateAction<CanvasTab>>;
     
     // Selected section for properties panel
     selectedSection: FormSection | null;
@@ -58,11 +66,16 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [formId, setFormId] = useState<string | null>(null);
     const [isPublished, setIsPublished] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const [formStyle, setFormStyle] = useState<FormStyle>('classic');
+    const [canvasTab, setCanvasTab] = useState<CanvasTab>('form');
 
-    const setFormMetadata = useCallback((id: string, published: boolean, url: string | null) => {
+    const setFormMetadata = useCallback((id: string, published: boolean, url: string | null, style?: FormStyle) => {
         setFormId(id);
         setIsPublished(published);
         setShareUrl(url);
+        if (style) {
+            setFormStyle(style);
+        }
     }, []);
 
     // Section CRUD operations
@@ -239,6 +252,10 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 isPublished,
                 shareUrl,
                 setFormMetadata,
+                formStyle,
+                setFormStyle,
+                canvasTab,
+                setCanvasTab,
                 selectedSection,
                 setSelectedSection,
             }}

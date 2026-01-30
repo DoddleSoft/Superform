@@ -2,9 +2,10 @@
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { FormElements } from "./FormElements";
-import { LuX, LuSettings, LuGripVertical, LuLayers } from "react-icons/lu";
+import { LuX, LuSettings, LuGripVertical, LuLayers, LuPaintbrush } from "react-icons/lu";
 import { motion, AnimatePresence, scaleIn } from "@/lib/animations";
-import { FormSection } from "@/types/form-builder";
+import { FormSection, FormStyle } from "@/types/form-builder";
+import { saveFormStyle } from "@/actions/form";
 import {
     DndContext,
     DragEndEvent,
@@ -23,6 +24,20 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// Form style options with labels and descriptions
+const FORM_STYLE_OPTIONS: { value: FormStyle; label: string; description: string }[] = [
+    { 
+        value: 'classic', 
+        label: 'Classic', 
+        description: 'All sections visible on one page, scrollable form layout' 
+    },
+    { 
+        value: 'typeform', 
+        label: 'Typeform', 
+        description: 'Step-by-step experience with slide animations between sections' 
+    },
+];
+
 export function PropertiesPanel() {
     const { 
         selectedElement, 
@@ -32,7 +47,11 @@ export function PropertiesPanel() {
         selectedSection,
         setSelectedSection,
         updateSection,
-        reorderSections
+        reorderSections,
+        canvasTab,
+        formStyle,
+        setFormStyle,
+        formId,
     } = useFormBuilder();
 
     // Find which section contains the selected element
@@ -47,6 +66,18 @@ export function PropertiesPanel() {
 
     const elementSectionId = selectedElement ? findElementSection() : null;
 
+    // Handle style change
+    const handleStyleChange = async (newStyle: FormStyle) => {
+        setFormStyle(newStyle);
+        if (formId) {
+            try {
+                await saveFormStyle(formId, newStyle);
+            } catch (error) {
+                console.error("Failed to save form style:", error);
+            }
+        }
+    };
+
     return (
         <motion.aside
             initial={{ opacity: 0, x: 20 }}
@@ -55,7 +86,13 @@ export function PropertiesPanel() {
             className="h-full bg-base-100 border-l border-base-200 flex flex-col overflow-hidden"
         >
             <AnimatePresence mode="wait">
-                {selectedElement ? (
+                {/* Design Tab - Show style settings */}
+                {canvasTab === 'design' ? (
+                    <DesignSettingsView 
+                        formStyle={formStyle} 
+                        onStyleChange={handleStyleChange} 
+                    />
+                ) : selectedElement ? (
                     // Element Properties View
                     <motion.div
                         key={selectedElement.id}
@@ -184,6 +221,83 @@ function SectionPropertiesView({
                 <div className="mt-4 p-3 bg-base-200/50 rounded-lg">
                     <p className="text-xs text-base-content/60">
                         <strong>Tip:</strong> Each section will be displayed as a full-screen page when the form is published.
+                    </p>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+// Design Settings View - shown when Design tab is active
+function DesignSettingsView({ 
+    formStyle, 
+    onStyleChange 
+}: { 
+    formStyle: FormStyle; 
+    onStyleChange: (style: FormStyle) => void;
+}) {
+    return (
+        <motion.div
+            key="design-settings"
+            variants={scaleIn}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="flex-1 flex flex-col overflow-hidden"
+        >
+            <div className="p-4 border-b border-base-200 bg-base-50/50 shrink-0">
+                <div className="flex items-center gap-2">
+                    <LuPaintbrush className="w-4 h-4 text-base-content/50" />
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-base-content/70">
+                        Design Settings
+                    </h3>
+                </div>
+                <p className="text-xs text-base-content/50 mt-1">
+                    Configure how your form looks
+                </p>
+            </div>
+
+            <div className="p-4 flex-1 overflow-y-auto">
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text font-medium">Form Style</span>
+                    </label>
+                    <p className="text-xs text-base-content/50 mb-3">
+                        Choose how your form is displayed to users
+                    </p>
+                    
+                    <div className="flex flex-col gap-3">
+                        {FORM_STYLE_OPTIONS.map((option) => (
+                            <label
+                                key={option.value}
+                                className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all
+                                    ${formStyle === option.value 
+                                        ? 'border-primary bg-primary/5' 
+                                        : 'border-base-200 hover:border-primary/50'
+                                    }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="formStyle"
+                                    value={option.value}
+                                    checked={formStyle === option.value}
+                                    onChange={() => onStyleChange(option.value)}
+                                    className="radio radio-primary mt-0.5"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-medium">{option.label}</span>
+                                    <p className="text-xs text-base-content/60 mt-1">
+                                        {option.description}
+                                    </p>
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="mt-6 p-3 bg-base-200/50 rounded-lg">
+                    <p className="text-xs text-base-content/60">
+                        <strong>Note:</strong> More design options coming soon, including colors, fonts, and custom branding.
                     </p>
                 </div>
             </div>

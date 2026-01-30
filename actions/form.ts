@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
-import type { Form, FormWithStats, PaginatedResponse, GetFormsParams } from "@/types/form-builder";
+import type { Form, FormWithStats, PaginatedResponse, GetFormsParams, FormStyle } from "@/types/form-builder";
 
 // ============== Form CRUD Operations ==============
 
@@ -255,7 +255,7 @@ export async function getFormContentByUrl(formUrl: string) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
         .from("forms")
-        .select("id, content, name, description") // Select minimal data for public view
+        .select("id, content, name, description, style") // Select minimal data for public view
         .eq("share_url", formUrl) // Assuming share_url is the UUID column
         .eq("published", true)
         .single();
@@ -385,4 +385,18 @@ export async function getFormSubmissions(formId: string) {
     }
 
     return data;
+}
+
+// ============== Form Style Operations ==============
+
+export async function saveFormStyle(id: string, style: FormStyle) {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+        .from("forms")
+        .update({ style })
+        .eq("id", id);
+
+    if (error) {
+        throw error;
+    }
 }
