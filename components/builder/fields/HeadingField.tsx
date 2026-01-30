@@ -1,0 +1,196 @@
+"use client";
+
+import { FormElementType, FormElementInstance, FormElementHelper } from "@/types/form-builder";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useFormBuilder } from "@/context/FormBuilderContext";
+import { LuHeading } from "react-icons/lu";
+
+const type: FormElementType = FormElementType.HEADING;
+
+const extraAttributes = {
+    title: "Heading",
+    subtitle: "",
+    level: "h2" as "h1" | "h2" | "h3" | "h4",
+    align: "left" as "left" | "center" | "right",
+};
+
+const propertiesSchema = z.object({
+    title: z.string().min(1).max(200),
+    subtitle: z.string().max(500),
+    level: z.enum(["h1", "h2", "h3", "h4"]),
+    align: z.enum(["left", "center", "right"]),
+});
+
+export const HeadingFieldFormElement: FormElementHelper = {
+    type,
+    construct: (id: string) => ({
+        id,
+        type,
+        extraAttributes,
+    }),
+    designerComponent: DesignerComponent,
+    formComponent: FormComponent,
+    propertiesComponent: PropertiesComponent,
+    // Read-only element - always valid
+    validate: (): boolean => true,
+    label: "Heading",
+};
+
+type CustomInstance = FormElementInstance & {
+    extraAttributes: typeof extraAttributes;
+};
+
+const headingStyles = {
+    h1: "text-3xl md:text-4xl font-bold",
+    h2: "text-2xl md:text-3xl font-semibold",
+    h3: "text-xl md:text-2xl font-medium",
+    h4: "text-lg md:text-xl font-medium",
+};
+
+const alignStyles = {
+    left: "text-left",
+    center: "text-center",
+    right: "text-right",
+};
+
+function DesignerComponent({ element }: { element: FormElementInstance }) {
+    const elementInstance = element as CustomInstance;
+    const { title, subtitle, level, align } = elementInstance.extraAttributes || extraAttributes;
+
+    return (
+        <div className={`flex flex-col gap-1 w-full ${alignStyles[align]}`}>
+            <div className="flex items-center gap-2 mb-1">
+                <LuHeading className="w-4 h-4 text-primary" />
+                <span className="text-xs text-base-content/50">{level.toUpperCase()}</span>
+            </div>
+            <div className={`text-base-content font-semibold ${level === "h1" ? "text-xl" : level === "h2" ? "text-lg" : "text-base"}`}>
+                {title}
+            </div>
+            {subtitle && (
+                <p className="text-sm text-base-content/70">{subtitle}</p>
+            )}
+        </div>
+    );
+}
+
+function FormComponent({
+    element,
+}: {
+    element: FormElementInstance;
+    submitValue?: (key: string, value: string) => void;
+    isInvalid?: boolean;
+    defaultValue?: string;
+}) {
+    const elementInstance = element as CustomInstance;
+    const { title, subtitle, level, align } = elementInstance.extraAttributes || extraAttributes;
+
+    return (
+        <div className={`flex flex-col gap-2 w-full ${alignStyles[align]}`}>
+            {level === "h1" && <h1 className={`text-[#262627] ${headingStyles.h1}`}>{title}</h1>}
+            {level === "h2" && <h2 className={`text-[#262627] ${headingStyles.h2}`}>{title}</h2>}
+            {level === "h3" && <h3 className={`text-[#262627] ${headingStyles.h3}`}>{title}</h3>}
+            {level === "h4" && <h4 className={`text-[#262627] ${headingStyles.h4}`}>{title}</h4>}
+            {subtitle && (
+                <p className="text-lg text-[#262627]/70">{subtitle}</p>
+            )}
+        </div>
+    );
+}
+
+type propertiesFormSchemaType = z.infer<typeof propertiesSchema>;
+
+function PropertiesComponent({ element }: { element: FormElementInstance }) {
+    const elementInstance = element as CustomInstance;
+    const { updateElementById } = useFormBuilder();
+
+    const defaults = elementInstance.extraAttributes || extraAttributes;
+
+    const form = useForm<propertiesFormSchemaType>({
+        resolver: zodResolver(propertiesSchema),
+        mode: "onBlur",
+        defaultValues: {
+            title: defaults.title,
+            subtitle: defaults.subtitle,
+            level: defaults.level,
+            align: defaults.align,
+        },
+    });
+
+    useEffect(() => {
+        form.reset(elementInstance.extraAttributes || extraAttributes);
+    }, [element, form]);
+
+    function applyChanges(values: propertiesFormSchemaType) {
+        updateElementById(elementInstance.id, {
+            ...elementInstance,
+            extraAttributes: values,
+        });
+    }
+
+    return (
+        <form
+            onBlur={form.handleSubmit(applyChanges)}
+            className="flex flex-col gap-4"
+        >
+            <div className="form-control w-full">
+                <label className="label">
+                    <span className="label-text">Title</span>
+                </label>
+                <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    {...form.register("title")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                />
+            </div>
+
+            <div className="form-control w-full">
+                <label className="label">
+                    <span className="label-text">Subtitle</span>
+                </label>
+                <textarea
+                    className="textarea textarea-bordered w-full"
+                    rows={2}
+                    {...form.register("subtitle")}
+                />
+                <label className="label">
+                    <span className="label-text-alt">Optional text below the heading</span>
+                </label>
+            </div>
+
+            <div className="form-control w-full">
+                <label className="label">
+                    <span className="label-text">Heading Level</span>
+                </label>
+                <select
+                    className="select select-bordered w-full"
+                    {...form.register("level")}
+                >
+                    <option value="h1">H1 - Largest</option>
+                    <option value="h2">H2 - Large</option>
+                    <option value="h3">H3 - Medium</option>
+                    <option value="h4">H4 - Small</option>
+                </select>
+            </div>
+
+            <div className="form-control w-full">
+                <label className="label">
+                    <span className="label-text">Text Alignment</span>
+                </label>
+                <select
+                    className="select select-bordered w-full"
+                    {...form.register("align")}
+                >
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                </select>
+            </div>
+        </form>
+    );
+}

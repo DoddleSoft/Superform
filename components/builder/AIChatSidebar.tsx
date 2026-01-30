@@ -216,20 +216,24 @@ export function AIChatSidebar() {
                                                                     <span>Adding:</span>
                                                                 </div>
                                                                 {action.elements
-                                                                    .filter((el) => el?.extraAttributes?.label)
-                                                                    .map((el, i) => (
-                                                                        <div
-                                                                            key={i}
-                                                                            className="flex items-center gap-2 text-xs bg-success/10 px-2 py-1 rounded"
-                                                                        >
-                                                                            <span className="badge badge-xs badge-outline badge-success">
-                                                                                {el.type}
-                                                                            </span>
-                                                                            <span className="truncate">
-                                                                                {el.extraAttributes.label}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
+                                                                    .map((el, i) => {
+                                                                        // Get display label based on field type
+                                                                        const attrs = el?.extraAttributes as Record<string, unknown>;
+                                                                        const displayLabel = attrs?.label || attrs?.title || (el.type === "RichText" ? "Rich Text Block" : el.type);
+                                                                        return (
+                                                                            <div
+                                                                                key={i}
+                                                                                className="flex items-center gap-2 text-xs bg-success/10 px-2 py-1 rounded"
+                                                                            >
+                                                                                <span className="badge badge-xs badge-outline badge-success">
+                                                                                    {el.type}
+                                                                                </span>
+                                                                                <span className="truncate">
+                                                                                    {String(displayLabel)}
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                             </div>
                                                         )}
 

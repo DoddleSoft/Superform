@@ -1,29 +1,33 @@
-import { FormElementType, FormElementInstance, FormElementHelper } from "@/types/form-builder";
+"use client";
+
+import { FormElementInstance, FormElementType, FormElementHelper } from "@/types/form-builder";
+import { useFormBuilder } from "@/context/FormBuilderContext";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { useFormBuilder } from "@/context/FormBuilderContext";
-import { BsFillCalendarDateFill } from "react-icons/bs";
-import { LuClock } from "react-icons/lu";
+import { MdEmail } from "react-icons/md";
 
-const type: FormElementType = FormElementType.DATE;
+const type: FormElementType = FormElementType.EMAIL;
+
+// Email regex pattern
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 const extraAttributes = {
-    label: "Date Field",
-    helperText: "Pick a date",
+    label: "Email",
+    helperText: "Enter your email address",
     required: false,
-    includeTime: false,
+    placeholder: "name@example.com",
 };
 
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
     required: z.boolean(),
-    includeTime: z.boolean(),
+    placeholder: z.string().max(50),
 });
 
-export const DateFieldFormElement: FormElementHelper = {
+export const EmailFieldFormElement: FormElementHelper = {
     type,
     construct: (id: string) => ({
         id,
@@ -35,13 +39,15 @@ export const DateFieldFormElement: FormElementHelper = {
     propertiesComponent: PropertiesComponent,
     validate: (formElement: FormElementInstance, currentValue: string): boolean => {
         const element = formElement as CustomInstance;
-        if (element.extraAttributes?.required) {
-            return currentValue.length > 0;
+        if (element.extraAttributes?.required && currentValue.length === 0) {
+            return false;
         }
-
+        if (currentValue.length > 0 && !EMAIL_REGEX.test(currentValue)) {
+            return false;
+        }
         return true;
     },
-    label: "Date Field"
+    label: "Email",
 };
 
 type CustomInstance = FormElementInstance & {
@@ -50,22 +56,22 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-2 w-full">
             <label className="label-text flex items-center gap-2">
-                <BsFillCalendarDateFill className="w-4 h-4 text-primary" />
+                <MdEmail className="w-4 h-4 text-primary" />
                 {label}
-                {includeTime && <LuClock className="w-3 h-3 text-base-content/50" />}
                 {required && <span className="text-red-500">*</span>}
             </label>
-            <div className="flex gap-2">
-                <input readOnly disabled type="date" className="input input-bordered flex-1" />
-                {includeTime && (
-                    <input readOnly disabled type="time" className="input input-bordered w-32" />
-                )}
-            </div>
+            <input
+                readOnly
+                disabled
+                type="email"
+                className="input input-bordered w-full"
+                placeholder={placeholder}
+            />
             {helperText && (
                 <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
@@ -85,79 +91,56 @@ function FormComponent({
     defaultValue?: string;
 }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
 
-    // Parse default value for date and time
-    const parseDefaultValue = () => {
-        if (!defaultValue) return { date: "", time: "" };
-        if (includeTime && defaultValue.includes("T")) {
-            const [date, time] = defaultValue.split("T");
-            return { date, time: time?.substring(0, 5) || "" };
-        }
-        return { date: defaultValue, time: "" };
-    };
-
-    const [dateValue, setDateValue] = useState(parseDefaultValue().date);
-    const [timeValue, setTimeValue] = useState(parseDefaultValue().time);
+    const [value, setValue] = useState(defaultValue || "");
     const [error, setError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const getCombinedValue = (date: string, time: string) => {
-        if (!date) return "";
-        if (includeTime && time) {
-            return `${date}T${time}`;
+    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+
+    const validateAndSubmit = (val: string) => {
+        if (!submitValue) return;
+        
+        const valid = EmailFieldFormElement.validate(elementInstance, val);
+        setError(!valid);
+        
+        if (!valid && val.length > 0) {
+            setErrorMessage("Please enter a valid email address");
+        } else {
+            setErrorMessage("");
         }
-        return date;
-    };
-
-    const handleDateChange = (newDate: string) => {
-        setDateValue(newDate);
-        const combined = getCombinedValue(newDate, timeValue);
-        if (!submitValue) return;
-        const valid = DateFieldFormElement.validate(elementInstance, combined);
-        setError(!valid);
-        submitValue(elementInstance.id, combined);
-    };
-
-    const handleTimeChange = (newTime: string) => {
-        setTimeValue(newTime);
-        const combined = getCombinedValue(dateValue, newTime);
-        if (!submitValue) return;
-        const valid = DateFieldFormElement.validate(elementInstance, combined);
-        setError(!valid);
-        submitValue(elementInstance.id, combined);
+        
+        submitValue(elementInstance.id, val);
     };
 
     return (
         <div className="flex flex-col gap-2 w-full">
             <label className={`text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <BsFillCalendarDateFill className="w-6 h-6" />
+                <MdEmail className="w-6 h-6" />
                 {label}
-                {includeTime && <LuClock className="w-5 h-5 text-[#262627]/50" />}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
-            <div className="flex gap-3 flex-wrap">
-                <input
-                    type="date"
-                    className={`flex-1 min-w-[200px] bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
-                    onChange={(e) => handleDateChange(e.target.value)}
-                    value={dateValue}
-                    onBlur={(e) => handleDateChange(e.target.value)}
-                />
-                {includeTime && (
-                    <input
-                        type="time"
-                        className={`w-40 bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
-                        onChange={(e) => handleTimeChange(e.target.value)}
-                        value={timeValue}
-                        onBlur={(e) => handleTimeChange(e.target.value)}
-                    />
-                )}
-            </div>
-            {helperText && (
+            <input
+                type="email"
+                className={`w-full bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 ${error ? "border-error" : ""}`}
+                placeholder={placeholder}
+                onChange={(e) => {
+                    setValue(e.target.value);
+                    validateAndSubmit(e.target.value);
+                }}
+                onBlur={(e) => {
+                    validateAndSubmit(e.target.value);
+                }}
+                value={value}
+            />
+            {errorMessage && (
+                <p className="text-lg text-error">{errorMessage}</p>
+            )}
+            {!errorMessage && helperText && (
                 <p className={`text-lg text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
@@ -181,7 +164,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
             label: defaults.label,
             helperText: defaults.helperText,
             required: defaults.required,
-            includeTime: defaults.includeTime,
+            placeholder: defaults.placeholder,
         },
     });
 
@@ -190,9 +173,15 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
+        const { label, helperText, required, placeholder } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
-            extraAttributes: values,
+            extraAttributes: {
+                label,
+                helperText,
+                required,
+                placeholder,
+            },
         });
     }
 
@@ -220,6 +209,23 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
 
             <div className="form-control w-full">
                 <label className="label">
+                    <span className="label-text">Placeholder</span>
+                </label>
+                <input
+                    type="text"
+                    className="input input-bordered w-full"
+                    {...form.register("placeholder")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                />
+                <label className="label">
+                    <span className="label-text-alt">The placeholder of the field.</span>
+                </label>
+            </div>
+
+            <div className="form-control w-full">
+                <label className="label">
                     <span className="label-text">Helper Text</span>
                 </label>
                 <input
@@ -232,20 +238,6 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                 />
                 <label className="label">
                     <span className="label-text-alt">Displayed below the field.</span>
-                </label>
-            </div>
-
-            <div className="form-control w-full">
-                <label className="label cursor-pointer">
-                    <span className="label-text">Include Time</span>
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        {...form.register("includeTime")}
-                    />
-                </label>
-                <label className="label">
-                    <span className="label-text-alt">Add a time picker alongside date</span>
                 </label>
             </div>
 

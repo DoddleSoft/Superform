@@ -27,6 +27,7 @@ export const dateFieldAttributesSchema = z.object({
     label: z.string().describe("The label text shown above the date picker"),
     helperText: z.string().optional().describe("Helper text shown below the input"),
     required: z.boolean().describe("Whether this field is required"),
+    includeTime: z.boolean().optional().describe("Whether to include a time picker"),
 });
 
 export const checkboxFieldAttributesSchema = z.object({
@@ -41,6 +42,65 @@ export const selectFieldAttributesSchema = z.object({
     required: z.boolean().describe("Whether this field is required"),
     placeholder: z.string().optional().describe("Placeholder text when nothing is selected"),
     options: z.array(z.string()).min(1).describe("Array of option values for the dropdown"),
+});
+
+// New field schemas
+export const emailFieldAttributesSchema = z.object({
+    label: z.string().describe("The label text shown above the email input"),
+    helperText: z.string().optional().describe("Helper text shown below the input"),
+    required: z.boolean().describe("Whether this field is required"),
+    placeholder: z.string().optional().describe("Placeholder text (e.g., 'name@example.com')"),
+});
+
+export const phoneFieldAttributesSchema = z.object({
+    label: z.string().describe("The label text shown above the phone input"),
+    helperText: z.string().optional().describe("Helper text shown below the input"),
+    required: z.boolean().describe("Whether this field is required"),
+    placeholder: z.string().optional().describe("Placeholder text (e.g., '+1 (555) 000-0000')"),
+});
+
+export const radioGroupAttributesSchema = z.object({
+    label: z.string().describe("The question or label for the single choice field"),
+    helperText: z.string().optional().describe("Helper text shown below the options"),
+    required: z.boolean().describe("Whether selecting an option is required"),
+    options: z.array(z.string()).min(2).describe("Array of option values to choose from"),
+});
+
+export const checkboxGroupAttributesSchema = z.object({
+    label: z.string().describe("The question or label for the multiple choice field"),
+    helperText: z.string().optional().describe("Helper text shown below the options"),
+    required: z.boolean().describe("Whether at least one selection is required"),
+    minSelect: z.number().min(0).optional().describe("Minimum number of selections (0 = no minimum)"),
+    maxSelect: z.number().min(0).optional().describe("Maximum number of selections (0 = no limit)"),
+    options: z.array(z.string()).min(2).describe("Array of option values to choose from"),
+});
+
+export const ratingFieldAttributesSchema = z.object({
+    label: z.string().describe("The label text for the rating field"),
+    helperText: z.string().optional().describe("Helper text shown below the rating"),
+    required: z.boolean().describe("Whether a rating is required"),
+    maxRating: z.number().min(3).max(10).describe("Maximum rating value (3-10)"),
+    ratingStyle: z.enum(["stars", "numbers"]).describe("Display style: 'stars' for star icons, 'numbers' for numeric buttons"),
+});
+
+export const yesNoFieldAttributesSchema = z.object({
+    label: z.string().describe("The question or label for the yes/no field"),
+    helperText: z.string().optional().describe("Helper text shown below the buttons"),
+    required: z.boolean().describe("Whether an answer is required"),
+    yesLabel: z.string().optional().describe("Custom label for the Yes button (default: 'Yes')"),
+    noLabel: z.string().optional().describe("Custom label for the No button (default: 'No')"),
+});
+
+export const headingFieldAttributesSchema = z.object({
+    title: z.string().describe("The heading text to display"),
+    subtitle: z.string().optional().describe("Optional subtitle or description text"),
+    level: z.enum(["h1", "h2", "h3", "h4"]).describe("Heading level for semantic HTML and sizing"),
+    align: z.enum(["left", "center", "right"]).optional().describe("Text alignment"),
+});
+
+export const richTextFieldAttributesSchema = z.object({
+    content: z.string().describe("The rich text content. Supports markdown: **bold**, *italic*, [links](url)"),
+    align: z.enum(["left", "center", "right"]).optional().describe("Text alignment"),
 });
 
 // Union schema for all form element types (without id - for new elements)
@@ -68,6 +128,38 @@ export const formElementSchema = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("Select"),
         extraAttributes: selectFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("Email"),
+        extraAttributes: emailFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("Phone"),
+        extraAttributes: phoneFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("RadioGroup"),
+        extraAttributes: radioGroupAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("CheckboxGroup"),
+        extraAttributes: checkboxGroupAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("Rating"),
+        extraAttributes: ratingFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("YesNo"),
+        extraAttributes: yesNoFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("Heading"),
+        extraAttributes: headingFieldAttributesSchema,
+    }),
+    z.object({
+        type: z.literal("RichText"),
+        extraAttributes: richTextFieldAttributesSchema,
     }),
 ]);
 
@@ -102,6 +194,46 @@ export const formElementWithIdSchema = z.discriminatedUnion("type", [
         id: z.string().describe("The unique identifier of the existing field"),
         type: z.literal("Select"),
         extraAttributes: selectFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Email"),
+        extraAttributes: emailFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Phone"),
+        extraAttributes: phoneFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("RadioGroup"),
+        extraAttributes: radioGroupAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("CheckboxGroup"),
+        extraAttributes: checkboxGroupAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Rating"),
+        extraAttributes: ratingFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("YesNo"),
+        extraAttributes: yesNoFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("Heading"),
+        extraAttributes: headingFieldAttributesSchema,
+    }),
+    z.object({
+        id: z.string().describe("The unique identifier of the existing field"),
+        type: z.literal("RichText"),
+        extraAttributes: richTextFieldAttributesSchema,
     }),
 ]);
 
@@ -157,7 +289,7 @@ export const deleteFieldsSchema = z.object({
 export const updateFieldSchema = z.object({
     fieldId: z.string().describe("The ID of the field to update"),
     updates: z.object({
-        type: z.enum(["TextField", "Number", "TextArea", "Date", "Checkbox", "Select"]).optional().describe("New field type (optional - only if changing the type)"),
+        type: z.enum(["TextField", "Number", "TextArea", "Date", "Checkbox", "Select", "Email", "Phone", "RadioGroup", "CheckboxGroup", "Rating", "YesNo", "Heading", "RichText"]).optional().describe("New field type (optional - only if changing the type)"),
         extraAttributes: z.object({
             label: z.string().optional(),
             helperText: z.string().optional(),
@@ -165,6 +297,18 @@ export const updateFieldSchema = z.object({
             placeholder: z.string().optional(),
             rows: z.number().min(1).max(20).optional(),
             options: z.array(z.string()).optional(),
+            includeTime: z.boolean().optional(),
+            minSelect: z.number().min(0).optional(),
+            maxSelect: z.number().min(0).optional(),
+            maxRating: z.number().min(3).max(10).optional(),
+            ratingStyle: z.enum(["stars", "numbers"]).optional(),
+            yesLabel: z.string().optional(),
+            noLabel: z.string().optional(),
+            title: z.string().optional(),
+            subtitle: z.string().optional(),
+            level: z.enum(["h1", "h2", "h3", "h4"]).optional(),
+            align: z.enum(["left", "center", "right"]).optional(),
+            content: z.string().optional(),
         }).describe("Partial attributes to update - only include fields you want to change"),
     }),
 });

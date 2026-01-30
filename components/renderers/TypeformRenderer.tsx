@@ -3,8 +3,8 @@
 import { FormElements } from "@/components/builder/FormElements";
 import { FormElementInstance, FormSection } from "@/types/form-builder";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuChevronLeft, LuChevronRight, LuCheck, LuArrowDown } from "react-icons/lu";
-import { useState, useRef, useEffect } from "react";
+import { LuChevronLeft, LuChevronRight, LuCheck, LuArrowDown, LuChevronDown } from "react-icons/lu";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface TypeformRendererProps {
     sections: FormSection[];
@@ -36,6 +36,9 @@ export function TypeformRenderer({
 }: TypeformRendererProps) {
     const [internalIndex, setInternalIndex] = useState(0);
     const [direction, setDirection] = useState(0);
+    const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+    const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Use controlled index if provided, otherwise internal state
     const currentSectionIndex = controlledIndex !== undefined ? controlledIndex : internalIndex;
@@ -44,6 +47,54 @@ export function TypeformRenderer({
     const totalSections = sections.length;
     const isFirstSection = currentSectionIndex === 0;
     const isLastSection = currentSectionIndex === totalSections - 1;
+
+    // Check if content is scrollable and handle scroll state
+    const checkScrollState = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const isScrollable = container.scrollHeight > container.clientHeight;
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+        
+        setShowScrollIndicator(isScrollable && !isAtBottom);
+        setHasScrolledToBottom(!isScrollable || isAtBottom);
+    }, []);
+
+    // Reset scroll state when section changes
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (container) {
+            container.scrollTop = 0;
+        }
+        // Small delay to ensure content is rendered before checking
+        const timer = setTimeout(checkScrollState, 100);
+        return () => clearTimeout(timer);
+    }, [currentSectionIndex, checkScrollState]);
+
+    // Listen to scroll events
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        container.addEventListener("scroll", checkScrollState);
+        window.addEventListener("resize", checkScrollState);
+        
+        return () => {
+            container.removeEventListener("scroll", checkScrollState);
+            window.removeEventListener("resize", checkScrollState);
+        };
+    }, [checkScrollState]);
+
+    // Smooth scroll down function
+    const scrollDown = () => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        
+        container.scrollBy({
+            top: 200,
+            behavior: "smooth"
+        });
+    };
 
     // Handle navigation
     const handleNext = () => {
@@ -123,79 +174,116 @@ export function TypeformRenderer({
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-8 md:px-12 relative z-10">
-                <AnimatePresence mode="wait" custom={direction}>
-                    <motion.div
-                        key={currentSection.id}
-                        custom={direction}
-                        variants={slideVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
-                        className="w-full flex flex-col gap-8"
-                    >
-                        {/* Section Question / Header */}
-                        <div>
-                            <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-[#0445AF] font-medium text-lg">
-                                    {currentSectionIndex + 1}
-                                    <span className="ml-1 text-base opacity-50">/</span>
-                                    <span className="ml-1 text-base opacity-50">{totalSections}</span>
-                                    <span className="ml-2">→</span>
-                                </span>
-                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#262627] leading-tight">
-                                    {currentSection.title}
-                                </h1>
+            {/* Main Content - Scrollable Container */}
+            <div 
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth typeform-scroll"
+                style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "rgba(4, 69, 175, 0.3) transparent",
+                }}
+            >
+                <div className="min-h-full flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-8 md:px-12 py-16 relative z-10">
+                    <AnimatePresence mode="wait" custom={direction}>
+                        <motion.div
+                            key={currentSection.id}
+                            custom={direction}
+                            variants={slideVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+                            className="w-full flex flex-col gap-8"
+                        >
+                            {/* Section Question / Header */}
+                            <div>
+                                <div className="flex items-baseline gap-2 mb-4">
+                                    <span className="text-[#0445AF] font-medium text-lg">
+                                        {currentSectionIndex + 1}
+                                        <span className="ml-1 text-base opacity-50">/</span>
+                                        <span className="ml-1 text-base opacity-50">{totalSections}</span>
+                                        <span className="ml-2">→</span>
+                                    </span>
+                                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#262627] leading-tight">
+                                        {currentSection.title}
+                                    </h1>
+                                </div>
+
+                                {currentSection.description && (
+                                    <p className="text-xl md:text-2xl font-light text-[#262627]/70 mt-2 pl-24 md:pl-0">
+                                        {currentSection.description}
+                                    </p>
+                                )}
                             </div>
 
-                            {currentSection.description && (
-                                <p className="text-xl md:text-2xl font-light text-[#262627]/70 mt-2 pl-24 md:pl-0">
-                                    {currentSection.description}
-                                </p>
-                            )}
-                        </div>
+                            {/* Form Fields Area */}
+                            <div key={renderKey} className="space-y-8 w-full">
+                                {currentSection.elements.map((element) => {
+                                    const FormElementDesc = FormElements[element.type];
+                                    if (!FormElementDesc) return null;
 
-                        {/* Form Fields Area */}
-                        <div key={renderKey} className="space-y-8 w-full">
-                            {currentSection.elements.map((element) => {
-                                const FormElementDesc = FormElements[element.type];
-                                if (!FormElementDesc) return null;
-
-                                const FormElement = FormElementDesc.formComponent;
-                                return (
-                                    <div key={element.id} className="w-full group">
-                                        {/* We might pass a special prop here in future for Typeform-specific styling if we modify the components directly */}
-                                        <FormElement
-                                            element={element}
-                                            submitValue={submitValue}
-                                            isInvalid={formErrors.current[element.id]}
-                                            defaultValue={formValues.current[element.id]}
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Action Area */}
-                        <div className="mt-8">
-                            <button
-                                onClick={handleNext}
-                                disabled={pending}
-                                className="inline-flex items-center gap-2 bg-[#0445AF] hover:bg-[#03368a] text-white px-8 py-3 rounded text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/10"
-                            >
-                                {isLastSection ? (pending ? "Submitting..." : "Submit") : "OK"}
-                                {isLastSection ? <LuCheck className="w-6 h-6" /> : <LuCheck className="w-6 h-6" />}
-                            </button>
-
-                            <div className="inline-flex items-center gap-2 ml-4 text-xs font-medium text-[#262627]/50 uppercase tracking-widest hidden md:inline-flex">
-                                press <span className="font-bold border-b border-[#262627]/30 pb-0.5">Enter ↵</span>
+                                    const FormElement = FormElementDesc.formComponent;
+                                    return (
+                                        <div key={element.id} className="w-full group">
+                                            {/* We might pass a special prop here in future for Typeform-specific styling if we modify the components directly */}
+                                            <FormElement
+                                                element={element}
+                                                submitValue={submitValue}
+                                                isInvalid={formErrors.current[element.id]}
+                                                defaultValue={formValues.current[element.id]}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
+
+                            {/* Action Area */}
+                            <div className="mt-8">
+                                <button
+                                    onClick={handleNext}
+                                    disabled={pending}
+                                    className="inline-flex items-center gap-2 bg-[#0445AF] hover:bg-[#03368a] text-white px-8 py-3 rounded text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/10"
+                                >
+                                    {isLastSection ? (pending ? "Submitting..." : "Submit") : "OK"}
+                                    {isLastSection ? <LuCheck className="w-6 h-6" /> : <LuCheck className="w-6 h-6" />}
+                                </button>
+
+                                <div className="inline-flex items-center gap-2 ml-4 text-xs font-medium text-[#262627]/50 uppercase tracking-widest hidden md:inline-flex">
+                                    press <span className="font-bold border-b border-[#262627]/30 pb-0.5">Enter ↵</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
             </div>
+
+            {/* Scroll Indicator - Shows when content is scrollable */}
+            <AnimatePresence>
+                {showScrollIndicator && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20"
+                    >
+                        <button
+                            onClick={scrollDown}
+                            className="flex flex-col items-center gap-1 text-[#0445AF]/70 hover:text-[#0445AF] transition-colors group"
+                        >
+                            <span className="text-xs font-medium uppercase tracking-wider opacity-70 group-hover:opacity-100">
+                                Scroll for more
+                            </span>
+                            <motion.div
+                                animate={{ y: [0, 5, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <LuChevronDown className="w-6 h-6" />
+                            </motion.div>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Navigation Buttons (Bottom Right) */}
             <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">

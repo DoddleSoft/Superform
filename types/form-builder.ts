@@ -5,6 +5,14 @@ export enum FormElementType {
     DATE = "Date",
     CHECKBOX = "Checkbox",
     SELECT = "Select",
+    EMAIL = "Email",
+    PHONE = "Phone",
+    RADIO_GROUP = "RadioGroup",
+    CHECKBOX_GROUP = "CheckboxGroup",
+    RATING = "Rating",
+    YES_NO = "YesNo",
+    HEADING = "Heading",
+    RICH_TEXT = "RichText",
 }
 
 // Form display styles
