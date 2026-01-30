@@ -17,6 +17,7 @@ interface FormSubmitComponentProps {
     formId: string;
     content: FormContent; // Now expects Section[] format
     style?: FormStyle; // Form display style
+    version?: number; // Form version for tracking
 }
 
 export function FormSubmitComponent({
@@ -24,6 +25,7 @@ export function FormSubmitComponent({
     formId,
     content,
     style = 'classic', // Default to classic style
+    version = 1, // Default version
 }: FormSubmitComponentProps) {
     const formValues = useRef<{ [key: string]: string }>({});
     const formErrors = useRef<{ [key: string]: boolean }>({});
@@ -185,7 +187,15 @@ export function FormSubmitComponent({
         startTransition(async () => {
             try {
                 const jsonContent = JSON.stringify(formValues.current);
-                await submitForm(formId, jsonContent, sessionId.current, totalSections);
+                // Pass version and content snapshot for response integrity
+                await submitForm(
+                    formId, 
+                    jsonContent, 
+                    sessionId.current, 
+                    totalSections,
+                    version,
+                    content // Store the form content at time of submission
+                );
                 setSubmitted(true);
             } catch (error) {
                 console.error(error);

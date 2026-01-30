@@ -2,8 +2,9 @@
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { publishForm } from "@/actions/form";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { 
     LuArrowLeft, 
     LuLoader, 
@@ -18,9 +19,12 @@ import {
     LuPenTool,
     LuChartBar,
     LuRocket,
+    LuHistory,
+    LuCircleAlert,
 } from "react-icons/lu";
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
+import { VersionHistoryModal } from "./VersionHistoryModal";
 
 type TabType = "build" | "integrate" | "settings" | "share" | "results";
 
@@ -37,18 +41,35 @@ export function BuilderHeader({
     lastSavedAt: Date | null;
     formName?: string;
 }) {
-    const { formId, isPublished, setFormMetadata } = useFormBuilder();
+    const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl } = useFormBuilder();
     const [loading, startTransition] = useTransition();
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
     const router = useRouter();
+    const { userId } = useAuth();
 
     const handlePublish = async () => {
-        if (!formId) return;
+        if (!formId || !userId) return;
         startTransition(async () => {
             try {
-                const result = await publishForm(formId);
+                const result = await publishForm(formId, userId);
                 if (result) {
-                    setFormMetadata(result.id, result.published, result.share_url);
-                    alert(`Form Published! Share URL: ${window.location.origin}/submit/${result.share_url}`);
+                    setFormMetadata(
+                        result.id, 
+                        result.published, 
+                        result.share_url,
+                        result.style,
+                        {
+                            currentVersion: result.current_version,
+                            hasUnpublishedChanges: result.has_unpublished_changes,
+                            publishedAt: result.published_at,
+                        }
+                    );
+                    if (!isPublished) {
+                        // First publish
+                        alert(`Form Published! Share URL: ${window.location.origin}/submit/${result.share_url}`);
+                    } else {
+                        alert("Form republished successfully!");
+                    }
                 }
             } catch (error) {
                 console.error("Failed to publish", error);
@@ -189,8 +210,8 @@ export function BuilderHeader({
                         className="btn btn-ghost btn-sm gap-2"
                         disabled={!isPublished}
                         onClick={() => {
-                            if (isPublished) {
-                                window.open(`/submit/${formId}`, '_blank');
+                            if (isPublished && shareUrl) {
+                                window.open(`/submit/${shareUrl}`, '_blank');
                             }
                         }}
                         title="Preview form"
@@ -199,23 +220,56 @@ export function BuilderHeader({
                         <span className="hidden sm:inline">Preview</span>
                     </button>
 
-                    {/* Publish */}
+                    {/* Version History */}
+                    {isPublished && currentVersion > 0 && (
+                        <button 
+                            className="btn btn-ghost btn-sm gap-2"
+                            onClick={() => setShowVersionHistory(true)}
+                            title="Version history"
+                        >
+                            <LuHistory className="w-4 h-4" />
+                            <span className="hidden sm:inline">
+                                {hasUnpublishedChanges ? "Draft" : `v${currentVersion}`}
+                            </span>
+                        </button>
+                    )}
+
+                    {/* Publish / Republish */}
                     <button
-                        className={`btn btn-sm gap-2 ${isPublished ? "btn-ghost" : "btn-primary"}`}
+                        className={`btn btn-sm gap-2 ${
+                            hasUnpublishedChanges 
+                                ? "btn-warning" 
+                                : isPublished 
+                                    ? "btn-ghost" 
+                                    : "btn-primary"
+                        }`}
                         onClick={handlePublish}
                         disabled={loading}
                     >
                         {loading ? (
                             <LuLoader className="w-4 h-4 animate-spin" />
+                        ) : hasUnpublishedChanges ? (
+                            <LuCircleAlert className="w-4 h-4" />
                         ) : (
                             <LuRocket className="w-4 h-4" />
                         )}
                         <span className="font-semibold">
-                            {isPublished ? "Published" : "Publish"}
+                            {hasUnpublishedChanges 
+                                ? "Republish" 
+                                : isPublished 
+                                    ? "Published" 
+                                    : "Publish"
+                            }
                         </span>
                     </button>
                 </div>
             </div>
+
+            {/* Version History Modal */}
+            <VersionHistoryModal 
+                isOpen={showVersionHistory} 
+                onClose={() => setShowVersionHistory(false)} 
+            />
         </div>
     );
 }

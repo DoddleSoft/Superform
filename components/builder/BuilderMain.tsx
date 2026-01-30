@@ -59,8 +59,18 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 const defaultSection = createSection(crypto.randomUUID(), "Section 1");
                 setSections([defaultSection]);
             }
-            // Set form metadata including style
-            setFormMetadata(form.id, form.published, form.share_url, form.style || 'classic');
+            // Set form metadata including style and versioning info
+            setFormMetadata(
+                form.id, 
+                form.published, 
+                form.share_url, 
+                form.style || 'classic',
+                {
+                    currentVersion: form.current_version || 1,
+                    hasUnpublishedChanges: form.has_unpublished_changes || false,
+                    publishedAt: form.published_at || null,
+                }
+            );
         }
     }, [form, setSections, setFormMetadata]);
 

@@ -63,13 +63,32 @@ export interface Form {
     workspace_id: string;
     name: string;
     description: string | null;
-    content: FormContent; // Changed from FormElementInstance[] to FormContent (Section[])
+    content: FormContent; // Draft content (auto-saved)
     published: boolean;
-    style: FormStyle; // Form display style
+    style: FormStyle; // Draft style
     share_url: string | null;
     created_at: string;
     updated_at: string;
     submission_count?: number; // Computed field from aggregation
+    // Versioning fields
+    published_content: FormContent | null; // Content shown to end users
+    published_style: FormStyle | null; // Style used for published form
+    published_at: string | null; // When last published
+    current_version: number; // Current published version (0 = never published)
+    has_unpublished_changes: boolean; // True if draft differs from published
+}
+
+// Form version for version history
+export interface FormVersion {
+    id: string;
+    form_id: string;
+    version: number;
+    content: FormContent;
+    style: FormStyle;
+    name: string;
+    description: string | null;
+    created_at: string;
+    created_by: string;
 }
 
 export interface FormWithStats extends Form {

@@ -10,7 +10,7 @@ export default async function SubmitPage({
     const { formUrl } = await params;
     const form = await getFormContentByUrl(formUrl);
 
-    if (!form) {
+    if (!form || !form.content) {
         notFound();
     }
 
@@ -19,7 +19,8 @@ export default async function SubmitPage({
             formUrl={formUrl} 
             content={form.content} 
             formId={form.id} 
-            style={form.style ?? 'classic'} 
+            style={form.style ?? 'classic'}
+            version={form.version ?? 1}
         />
     );
 }

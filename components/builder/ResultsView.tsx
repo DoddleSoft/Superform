@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { FormElementType } from "@/types/form-builder";
+import { FormElementType, FormSection } from "@/types/form-builder";
 import { FormSubmission, SubmissionWithProgress, calculateSubmissionProgress, calculateSubmissionStats } from "@/types/submission";
 import React, { useMemo, useState } from "react";
 import { FormElements } from "./FormElements";
@@ -21,6 +21,7 @@ import {
     LuUsers,
     LuTrendingUp,
     LuChartBar,
+    LuArchive,
 } from "react-icons/lu";
 
 type ViewMode = "table" | "cards";
@@ -30,6 +31,46 @@ interface Column {
     id: string;
     label: string;
     type: FormElementType;
+    isDeleted?: boolean; // Mark fields that are no longer in the current form
+}
+
+// Helper to extract columns from a sections array (current form or snapshot)
+function extractColumnsFromSections(sections: FormSection[]): Column[] {
+    const cols: Column[] = [];
+    const allElements = sections.flatMap(section => section.elements);
+    
+    allElements.forEach((element) => {
+        switch (element.type) {
+            case FormElementType.TEXT_FIELD:
+            case FormElementType.NUMBER:
+            case FormElementType.TEXTAREA:
+            case FormElementType.DATE:
+            case FormElementType.CHECKBOX:
+            case FormElementType.SELECT:
+                cols.push({
+                    id: element.id,
+                    label: element.extraAttributes?.label || FormElements[element.type]?.label || "Field",
+                    type: element.type,
+                });
+                break;
+        }
+    });
+    return cols;
+}
+
+// Get the label for a field from a submission's snapshot, or fall back to current columns
+function getFieldLabelFromSubmission(fieldId: string, submission: FormSubmission, currentColumns: Column[]): string {
+    // First try to get from snapshot
+    if (submission.form_content_snapshot) {
+        const snapshotCols = extractColumnsFromSections(submission.form_content_snapshot);
+        const snapshotCol = snapshotCols.find(c => c.id === fieldId);
+        if (snapshotCol) {
+            return snapshotCol.label;
+        }
+    }
+    // Fall back to current columns
+    const currentCol = currentColumns.find(c => c.id === fieldId);
+    return currentCol?.label || "Unknown Field";
 }
 
 export function ResultsView({ submissions }: { submissions: FormSubmission[] }) {
@@ -39,32 +80,41 @@ export function ResultsView({ submissions }: { submissions: FormSubmission[] }) 
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithProgress | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-    // Flatten all elements from all sections
-    const allElements = useMemo(() => {
-        return sections.flatMap(section => section.elements);
+    // Get current form columns
+    const currentColumns: Column[] = useMemo(() => {
+        return extractColumnsFromSections(sections);
     }, [sections]);
 
-    // Map columns from form elements
+    // Merge columns: current form + any deleted fields from snapshots
+    // This ensures we can display responses for fields that were later deleted
     const columns: Column[] = useMemo(() => {
-        const cols: Column[] = [];
-        allElements.forEach((element) => {
-            switch (element.type) {
-                case FormElementType.TEXT_FIELD:
-                case FormElementType.NUMBER:
-                case FormElementType.TEXTAREA:
-                case FormElementType.DATE:
-                case FormElementType.CHECKBOX:
-                case FormElementType.SELECT:
-                    cols.push({
-                        id: element.id,
-                        label: element.extraAttributes?.label || FormElements[element.type]?.label || "Field",
-                        type: element.type,
-                    });
-                    break;
+        const columnMap = new Map<string, Column>();
+        
+        // Add current columns first
+        currentColumns.forEach(col => {
+            columnMap.set(col.id, col);
+        });
+        
+        // Check all submissions with snapshots for additional fields
+        submissions.forEach(submission => {
+            if (submission.form_content_snapshot) {
+                const snapshotCols = extractColumnsFromSections(submission.form_content_snapshot);
+                snapshotCols.forEach(col => {
+                    if (!columnMap.has(col.id)) {
+                        // This is a deleted field - add it with marker
+                        columnMap.set(col.id, { ...col, isDeleted: true });
+                    }
+                });
             }
         });
-        return cols;
-    }, [allElements]);
+        
+        // Sort: current fields first, then deleted fields
+        return Array.from(columnMap.values()).sort((a, b) => {
+            if (a.isDeleted && !b.isDeleted) return 1;
+            if (!a.isDeleted && b.isDeleted) return -1;
+            return 0;
+        });
+    }, [currentColumns, submissions]);
 
     // Process submissions with progress
     const processedSubmissions: SubmissionWithProgress[] = useMemo(() => {
@@ -382,7 +432,12 @@ function TableView({
                         <th className="w-28">Status</th>
                         {visibleColumns.map((col) => (
                             <th key={col.id} className="max-w-[200px]">
-                                {col.label}
+                                <span className={`flex items-center gap-1.5 ${col.isDeleted ? 'text-base-content/50' : ''}`}>
+                                    {col.isDeleted && (
+                                        <LuArchive className="w-3 h-3" title="Deleted field" />
+                                    )}
+                                    {col.label}
+                                </span>
                             </th>
                         ))}
                         {hiddenColumns.length > 0 && (
@@ -773,15 +828,23 @@ function SubmissionDetailModal({
                                     <div
                                         key={col.id}
                                         className={`p-4 rounded-lg border ${
-                                            hasValue
-                                                ? "border-base-200 bg-base-100"
-                                                : "border-dashed border-base-300 bg-base-200/30"
+                                            col.isDeleted
+                                                ? "border-warning/30 bg-warning/5"
+                                                : hasValue
+                                                    ? "border-base-200 bg-base-100"
+                                                    : "border-dashed border-base-300 bg-base-200/30"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-base-content/70 mb-1">
+                                                <p className={`text-sm font-medium mb-1 flex items-center gap-1.5 ${col.isDeleted ? 'text-warning' : 'text-base-content/70'}`}>
+                                                    {col.isDeleted && (
+                                                        <LuArchive className="w-3.5 h-3.5" />
+                                                    )}
                                                     {col.label}
+                                                    {col.isDeleted && (
+                                                        <span className="text-xs font-normal">(deleted)</span>
+                                                    )}
                                                 </p>
                                                 {hasValue ? (
                                                     <div className="text-base">

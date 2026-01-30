@@ -39,7 +39,7 @@ type FormBuilderContextType = {
     formId: string | null;
     isPublished: boolean;
     shareUrl: string | null;
-    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle) => void;
+    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle, versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }) => void;
     
     // Form Style
     formStyle: FormStyle;
@@ -48,6 +48,13 @@ type FormBuilderContextType = {
     // Canvas Tab (form | design | logic)
     canvasTab: CanvasTab;
     setCanvasTab: Dispatch<SetStateAction<CanvasTab>>;
+    
+    // Versioning
+    currentVersion: number;
+    hasUnpublishedChanges: boolean;
+    publishedAt: string | null;
+    setHasUnpublishedChanges: Dispatch<SetStateAction<boolean>>;
+    setVersionInfo: (version: number, hasChanges: boolean, publishedAt: string | null) => void;
     
     // Selected section for properties panel
     selectedSection: FormSection | null;
@@ -68,14 +75,36 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [formStyle, setFormStyle] = useState<FormStyle>('classic');
     const [canvasTab, setCanvasTab] = useState<CanvasTab>('form');
+    
+    // Versioning state
+    const [currentVersion, setCurrentVersion] = useState<number>(0);
+    const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState<boolean>(false);
+    const [publishedAt, setPublishedAt] = useState<string | null>(null);
 
-    const setFormMetadata = useCallback((id: string, published: boolean, url: string | null, style?: FormStyle) => {
+    const setFormMetadata = useCallback((
+        id: string, 
+        published: boolean, 
+        url: string | null, 
+        style?: FormStyle,
+        versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }
+    ) => {
         setFormId(id);
         setIsPublished(published);
         setShareUrl(url);
         if (style) {
             setFormStyle(style);
         }
+        if (versionInfo) {
+            setCurrentVersion(versionInfo.currentVersion);
+            setHasUnpublishedChanges(versionInfo.hasUnpublishedChanges);
+            setPublishedAt(versionInfo.publishedAt);
+        }
+    }, []);
+
+    const setVersionInfo = useCallback((version: number, hasChanges: boolean, pubAt: string | null) => {
+        setCurrentVersion(version);
+        setHasUnpublishedChanges(hasChanges);
+        setPublishedAt(pubAt);
     }, []);
 
     // Section CRUD operations
@@ -256,6 +285,11 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 setFormStyle,
                 canvasTab,
                 setCanvasTab,
+                currentVersion,
+                hasUnpublishedChanges,
+                publishedAt,
+                setHasUnpublishedChanges,
+                setVersionInfo,
                 selectedSection,
                 setSelectedSection,
             }}

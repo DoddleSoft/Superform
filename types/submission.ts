@@ -1,5 +1,7 @@
 // Types for form submissions
 
+import { FormSection } from "./form-builder";
+
 export interface FormSubmission {
     id: string;
     form_id: string;
@@ -8,6 +10,8 @@ export interface FormSubmission {
     session_id: string;
     last_section_index: number;
     total_sections: number;
+    form_version?: number;
+    form_content_snapshot?: FormSection[];
     created_at: string;
     updated_at: string;
 }

@@ -210,6 +210,7 @@ export async function saveFormContent(id: string, jsonContent: string) {
         .from("forms")
         .update({
             content: JSON.parse(jsonContent),
+            has_unpublished_changes: true, // Mark as having unpublished changes
         })
         .eq("id", id);
 
@@ -218,12 +219,41 @@ export async function saveFormContent(id: string, jsonContent: string) {
     }
 }
 
-export async function publishForm(id: string) {
+export async function publishForm(id: string, userId: string) {
     const supabase = await createSupabaseServerClient();
+    
+    // First get the current form to access content and compare with published
+    const { data: currentForm, error: fetchError } = await supabase
+        .from("forms")
+        .select("content, style, name, description, current_version, published_content, published_style")
+        .eq("id", id)
+        .single();
+
+    if (fetchError) {
+        throw fetchError;
+    }
+
+    // Check if content has actually changed from published version
+    const contentChanged = JSON.stringify(currentForm.content) !== JSON.stringify(currentForm.published_content)
+        || currentForm.style !== currentForm.published_style;
+    
+    const now = new Date().toISOString();
+    
+    // Only increment version if content actually changed
+    const newVersion = contentChanged 
+        ? (currentForm.current_version || 0) + 1 
+        : currentForm.current_version || 1;
+
+    // Update the form with published content
     const { data, error } = await supabase
         .from("forms")
         .update({
             published: true,
+            published_content: currentForm.content,
+            published_style: currentForm.style,
+            published_at: now,
+            current_version: newVersion,
+            has_unpublished_changes: false,
         })
         .eq("id", id)
         .select()
@@ -231,6 +261,26 @@ export async function publishForm(id: string) {
 
     if (error) {
         throw error;
+    }
+
+    // Only create a version snapshot if content changed
+    if (contentChanged) {
+        const { error: versionError } = await supabase
+            .from("form_versions")
+            .insert({
+                form_id: id,
+                version: newVersion,
+                content: currentForm.content,
+                style: currentForm.style || 'classic',
+                name: currentForm.name,
+                description: currentForm.description,
+                created_by: userId,
+            });
+
+        if (versionError) {
+            console.error("Failed to create version snapshot:", versionError);
+            // Don't throw - publishing succeeded, version tracking is secondary
+        }
     }
 
     return data;
@@ -255,8 +305,8 @@ export async function getFormContentByUrl(formUrl: string) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
         .from("forms")
-        .select("id, content, name, description, style") // Select minimal data for public view
-        .eq("share_url", formUrl) // Assuming share_url is the UUID column
+        .select("id, published_content, name, description, published_style, current_version") // Use published content for public view
+        .eq("share_url", formUrl)
         .eq("published", true)
         .single();
 
@@ -264,14 +314,24 @@ export async function getFormContentByUrl(formUrl: string) {
         throw error;
     }
 
-    return data;
+    // Return in expected format, using published content
+    return {
+        id: data.id,
+        content: data.published_content,
+        name: data.name,
+        description: data.description,
+        style: data.published_style,
+        version: data.current_version,
+    };
 }
 
 export async function submitForm(
     formId: string,
     jsonContent: string,
     sessionId?: string,
-    totalSections?: number
+    totalSections?: number,
+    formVersion?: number,
+    formContentSnapshot?: any
 ) {
     const supabase = await createSupabaseServerClient();
     const data = JSON.parse(jsonContent);
@@ -285,6 +345,8 @@ export async function submitForm(
                 is_complete: true,
                 last_section_index: totalSections || 1,
                 total_sections: totalSections || 1,
+                form_version: formVersion || 1,
+                form_content_snapshot: formContentSnapshot || null,
             })
             .eq("session_id", sessionId);
 
@@ -299,6 +361,8 @@ export async function submitForm(
                     session_id: sessionId,
                     last_section_index: totalSections || 1,
                     total_sections: totalSections || 1,
+                    form_version: formVersion || 1,
+                    form_content_snapshot: formContentSnapshot || null,
                 });
 
             if (insertError) {
@@ -313,6 +377,8 @@ export async function submitForm(
                 form_id: formId,
                 data,
                 is_complete: true,
+                form_version: formVersion || 1,
+                form_content_snapshot: formContentSnapshot || null,
             });
 
         if (error) {
@@ -393,10 +459,84 @@ export async function saveFormStyle(id: string, style: FormStyle) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase
         .from("forms")
-        .update({ style })
+        .update({ 
+            style,
+            has_unpublished_changes: true, // Mark as having unpublished changes
+        })
         .eq("id", id);
 
     if (error) {
         throw error;
     }
+}
+
+// ============== Form Version Operations ==============
+
+export async function getFormVersions(formId: string) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from("form_versions")
+        .select("*")
+        .eq("form_id", formId)
+        .order("version", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+export async function restoreFormVersion(formId: string, version: number) {
+    const supabase = await createSupabaseServerClient();
+    
+    // Get the version to restore
+    const { data: versionData, error: fetchError } = await supabase
+        .from("form_versions")
+        .select("content, style")
+        .eq("form_id", formId)
+        .eq("version", version)
+        .single();
+
+    if (fetchError) {
+        throw fetchError;
+    }
+
+    // Update the form's draft content with the version content
+    const { data, error } = await supabase
+        .from("forms")
+        .update({
+            content: versionData.content,
+            style: versionData.style,
+            has_unpublished_changes: true, // Will need to republish
+        })
+        .eq("id", formId)
+        .select()
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    revalidatePath(`/builder/${formId}`);
+    return data;
+}
+
+export async function unpublishForm(id: string) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from("forms")
+        .update({
+            published: false,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    revalidatePath("/dashboard");
+    return data;
 }
