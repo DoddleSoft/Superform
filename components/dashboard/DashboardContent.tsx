@@ -12,7 +12,7 @@ import { CreateFormModal } from "@/components/CreateFormModal";
 import { CreateWorkspaceModal } from "@/components/CreateWorkspaceModal";
 import { WorkspaceSettingsModal } from "./WorkspaceSettingsModal";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiChevronDown, FiMoreVertical, FiFolder, FiUserPlus } from "react-icons/fi";
+import { FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiChevronDown, FiMoreVertical, FiFolder } from "react-icons/fi";
 import type { FormWithStats, PaginatedResponse } from "@/types/form-builder";
 
 const PAGE_SIZE = 12;
@@ -209,11 +209,7 @@ export function DashboardContent() {
                         </ul>
                     </div>
 
-                    {/* Invite Team Button */}
-                    <button className="btn btn-ghost btn-sm gap-2 text-base-content/70 hidden sm:flex">
-                        <FiUserPlus className="w-4 h-4" />
-                        Invite Team
-                    </button>
+
 
                     {/* Workspace Menu */}
                     <div className="dropdown">
@@ -355,14 +351,13 @@ export function DashboardContent() {
                                 <FiChevronLeft className="w-5 h-5" />
                                 Previous
                             </button>
-                            
+
                             <div className="join">
                                 {[...Array(totalPages)].map((_, i) => (
                                     <button
                                         key={i + 1}
-                                        className={`join-item btn btn-sm ${
-                                            page === i + 1 ? "btn-primary" : ""
-                                        }`}
+                                        className={`join-item btn btn-sm ${page === i + 1 ? "btn-primary" : ""
+                                            }`}
                                         onClick={() => setPage(i + 1)}
                                     >
                                         {i + 1}

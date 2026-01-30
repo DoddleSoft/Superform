@@ -7,7 +7,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceSettingsModal } from "@/components/dashboard";
 import Link from "next/link";
-import { FiMenu, FiX, FiSettings, FiHome, FiBell } from "react-icons/fi";
+import { FiMenu, FiX, FiSettings, FiHome } from "react-icons/fi";
 
 export default function DashboardLayout({
     children,
@@ -58,11 +58,7 @@ export default function DashboardLayout({
 
 
 
-                            {/* Notifications */}
-                            <button className="btn btn-ghost btn-sm btn-circle relative">
-                                <FiBell className="w-5 h-5" />
-                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                            </button>
+
 
                             <ThemeToggle />
 
