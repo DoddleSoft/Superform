@@ -10,13 +10,14 @@ import {
     useCallback,
     useMemo,
 } from "react";
-import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow, createRow, getSectionElements } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow, createRow, getSectionElements, ThankYouPageSettings, DEFAULT_THANK_YOU_PAGE } from "@/types/form-builder";
 
 // Published snapshot for diff comparison
 interface PublishedSnapshot {
     content: FormContent | null;
     style: FormStyle | null;
     designSettings: FormDesignSettings | null;
+    thankYouPage: ThankYouPageSettings | null;
 }
 
 // Drop position for elements - 'before', 'after', or 'side' (add to same row)
@@ -74,6 +75,7 @@ type FormBuilderContextType = {
         shareUrl: string | null, 
         style?: FormStyle, 
         designSettings?: FormDesignSettings, 
+        thankYouPage?: ThankYouPageSettings,
         versionInfo?: { currentVersion: number; publishedAt: string | null },
         publishedSnapshot?: PublishedSnapshot
     ) => void;
@@ -87,9 +89,18 @@ type FormBuilderContextType = {
     setDesignSettings: Dispatch<SetStateAction<FormDesignSettings>>;
     updateDesignSetting: <K extends keyof FormDesignSettings>(key: K, value: FormDesignSettings[K]) => void;
     
+    // Thank You Page Settings
+    thankYouPage: ThankYouPageSettings;
+    setThankYouPage: Dispatch<SetStateAction<ThankYouPageSettings>>;
+    updateThankYouPage: <K extends keyof ThankYouPageSettings>(key: K, value: ThankYouPageSettings[K]) => void;
+    
     // Canvas Tab (form | design | logic)
     canvasTab: CanvasTab;
     setCanvasTab: Dispatch<SetStateAction<CanvasTab>>;
+    
+    // Selected Thank You Page (for properties panel)
+    isThankYouPageSelected: boolean;
+    setIsThankYouPageSelected: Dispatch<SetStateAction<boolean>>;
     
     // Versioning
     currentVersion: number;
@@ -113,9 +124,10 @@ const FormBuilderContext = createContext<FormBuilderContextType | undefined>(
 function createFormSnapshot(
     content: FormContent | null,
     style: FormStyle | null,
-    designSettings: FormDesignSettings | null
+    designSettings: FormDesignSettings | null,
+    thankYouPage: ThankYouPageSettings | null
 ): string {
-    return JSON.stringify({ content, style, designSettings });
+    return JSON.stringify({ content, style, designSettings, thankYouPage });
 }
 
 export function FormBuilderProvider({ children }: { children: ReactNode }) {
@@ -123,11 +135,13 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
     const [selectedElement, setSelectedElement] = useState<FormElementInstance | null>(null);
     const [selectedSection, setSelectedSection] = useState<FormSection | null>(null);
+    const [isThankYouPageSelected, setIsThankYouPageSelected] = useState(false);
     const [formId, setFormId] = useState<string | null>(null);
     const [isPublished, setIsPublished] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [formStyle, setFormStyle] = useState<FormStyle>('classic');
     const [designSettings, setDesignSettings] = useState<FormDesignSettings>(DEFAULT_DESIGN_SETTINGS);
+    const [thankYouPage, setThankYouPage] = useState<ThankYouPageSettings>(DEFAULT_THANK_YOU_PAGE);
     const [canvasTab, setCanvasTab] = useState<CanvasTab>('form');
     
     // Versioning state
@@ -139,6 +153,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         content: null,
         style: null,
         designSettings: null,
+        thankYouPage: null,
     });
 
     // Compute hasUnpublishedChanges by comparing current state with published snapshot
@@ -154,16 +169,17 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
         
         // Create string representations for comparison
-        const currentSnapshot = createFormSnapshot(sections, formStyle, designSettings);
+        const currentSnapshot = createFormSnapshot(sections, formStyle, designSettings, thankYouPage);
         const publishedSnapshotStr = createFormSnapshot(
             publishedSnapshot.content,
             publishedSnapshot.style,
-            publishedSnapshot.designSettings
+            publishedSnapshot.designSettings,
+            publishedSnapshot.thankYouPage
         );
         
         // Compare the two snapshots
         return currentSnapshot !== publishedSnapshotStr;
-    }, [isPublished, sections, formStyle, designSettings, publishedSnapshot]);
+    }, [isPublished, sections, formStyle, designSettings, thankYouPage, publishedSnapshot]);
 
     const updatePublishedSnapshot = useCallback((snapshot: PublishedSnapshot) => {
         setPublishedSnapshot(snapshot);
@@ -175,6 +191,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         url: string | null, 
         style?: FormStyle,
         designSettingsData?: FormDesignSettings,
+        thankYouPageData?: ThankYouPageSettings,
         versionInfo?: { currentVersion: number; publishedAt: string | null },
         snapshot?: PublishedSnapshot
     ) => {
@@ -186,6 +203,9 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
         if (designSettingsData) {
             setDesignSettings({ ...DEFAULT_DESIGN_SETTINGS, ...designSettingsData });
+        }
+        if (thankYouPageData) {
+            setThankYouPage({ ...DEFAULT_THANK_YOU_PAGE, ...thankYouPageData });
         }
         if (versionInfo) {
             setCurrentVersion(versionInfo.currentVersion);
@@ -202,6 +222,14 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         value: FormDesignSettings[K]
     ) => {
         setDesignSettings(prev => ({ ...prev, [key]: value }));
+    }, []);
+
+    // Helper to update a single thank you page setting
+    const updateThankYouPage = useCallback(<K extends keyof ThankYouPageSettings>(
+        key: K, 
+        value: ThankYouPageSettings[K]
+    ) => {
+        setThankYouPage(prev => ({ ...prev, [key]: value }));
     }, []);
 
     const setVersionInfo = useCallback((version: number, pubAt: string | null) => {
@@ -513,8 +541,13 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 designSettings,
                 setDesignSettings,
                 updateDesignSetting,
+                thankYouPage,
+                setThankYouPage,
+                updateThankYouPage,
                 canvasTab,
                 setCanvasTab,
+                isThankYouPageSelected,
+                setIsThankYouPageSelected,
                 currentVersion,
                 hasUnpublishedChanges,
                 publishedAt,

@@ -14,11 +14,14 @@ import {
     LuToggleLeft,
     LuPalette,
     LuMousePointer2,
-    LuLayoutGrid
+    LuLayoutGrid,
+    LuPartyPopper,
+    LuLink,
+    LuCheck
 } from "react-icons/lu";
 import { motion, AnimatePresence, scaleIn } from "@/lib/animations";
-import { FormSection, FormStyle, FormElementType, FormDesignSettings, FormFontFamily, ButtonCornerRadius, DEFAULT_DESIGN_SETTINGS, getSectionElements } from "@/types/form-builder";
-import { saveFormStyle, saveFormDesignSettings } from "@/actions/form";
+import { FormSection, FormStyle, FormElementType, FormDesignSettings, FormFontFamily, ButtonCornerRadius, DEFAULT_DESIGN_SETTINGS, getSectionElements, ThankYouPageSettings } from "@/types/form-builder";
+import { saveFormStyle, saveFormDesignSettings, saveThankYouPage } from "@/actions/form";
 import {
     DndContext,
     DragEndEvent,
@@ -105,6 +108,10 @@ export function PropertiesPanel() {
         designSettings,
         updateDesignSetting,
         formId,
+        thankYouPage,
+        updateThankYouPage,
+        isThankYouPageSelected,
+        setIsThankYouPageSelected,
     } = useFormBuilder();
 
     // Local state for right panel tab
@@ -276,6 +283,14 @@ export function PropertiesPanel() {
                         section={selectedSection} 
                         onClose={() => setSelectedSection(null)}
                         onUpdate={(updates) => updateSection(selectedSection.id, updates)}
+                    />
+                ) : isThankYouPageSelected ? (
+                    // Thank You Page Properties View
+                    <ThankYouPagePropertiesView 
+                        settings={thankYouPage}
+                        onClose={() => setIsThankYouPageSelected(false)}
+                        onUpdate={updateThankYouPage}
+                        formId={formId}
                     />
                 ) : (
                     // Section List View (when nothing selected)
@@ -505,7 +520,14 @@ function DesignSettingsView({
 }
 
 function SectionListView() {
-    const { sections, reorderSections, setSelectedSection, addSection } = useFormBuilder();
+    const { 
+        sections, 
+        reorderSections, 
+        setSelectedSection, 
+        addSection,
+        setIsThankYouPageSelected,
+        setSelectedElement,
+    } = useFormBuilder();
     
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -523,6 +545,12 @@ function SectionListView() {
             const newOrder = arrayMove(sections, oldIndex, newIndex);
             reorderSections(newOrder.map((s) => s.id));
         }
+    };
+
+    const handleThankYouPageClick = () => {
+        setSelectedElement(null);
+        setSelectedSection(null);
+        setIsThankYouPageSelected(true);
     };
 
     return (
@@ -586,6 +614,32 @@ function SectionListView() {
                         </SortableContext>
                     </DndContext>
                 )}
+
+                {/* Thank You Page Section */}
+                <div className="mt-4 pt-4 border-t border-base-200">
+                    <p className="text-[10px] text-base-content/50 uppercase tracking-wide font-medium mb-2 px-1">
+                        Thank You Page
+                    </p>
+                    <div
+                        className="flex items-center gap-2 p-2.5 rounded-lg border bg-base-100 cursor-pointer transition-all group border-base-200 hover:border-primary/40 hover:shadow-sm"
+                        onClick={handleThankYouPageClick}
+                    >
+                        <div className="w-6 h-6 rounded bg-success/10 flex items-center justify-center shrink-0">
+                            <LuPartyPopper className="w-3.5 h-3.5 text-success" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-base-content truncate">
+                                Thank You
+                            </p>
+                            <p className="text-[10px] text-base-content/50">
+                                Shown after submission
+                            </p>
+                        </div>
+                        
+                        <LuSettings className="w-3.5 h-3.5 text-base-content/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                </div>
             </div>
 
             {/* Footer hint */}
@@ -663,5 +717,158 @@ function SortableSectionItem({
             
             <LuSettings className="w-3.5 h-3.5 text-base-content/30 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
+    );
+}
+
+// Thank You Page Properties View
+function ThankYouPagePropertiesView({ 
+    settings, 
+    onClose, 
+    onUpdate,
+    formId,
+}: { 
+    settings: ThankYouPageSettings; 
+    onClose: () => void;
+    onUpdate: <K extends keyof ThankYouPageSettings>(key: K, value: ThankYouPageSettings[K]) => void;
+    formId: string | null;
+}) {
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Handle setting change with debounce
+    const handleSettingChange = useCallback(<K extends keyof ThankYouPageSettings>(
+        key: K, 
+        value: ThankYouPageSettings[K]
+    ) => {
+        onUpdate(key, value);
+        
+        // Debounce save to prevent too many API calls
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        
+        saveTimeoutRef.current = setTimeout(async () => {
+            if (formId) {
+                try {
+                    const updatedSettings = { ...settings, [key]: value };
+                    await saveThankYouPage(formId, updatedSettings);
+                } catch (error) {
+                    console.error("Failed to save thank you page settings:", error);
+                }
+            }
+        }, 500);
+    }, [formId, settings, onUpdate]);
+
+    return (
+        <motion.div
+            key="thank-you-page-properties"
+            variants={scaleIn}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="flex-1 flex flex-col overflow-hidden"
+        >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success">
+                            <LuPartyPopper className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-sm text-base-content">
+                                Thank You Page
+                            </h3>
+                            <p className="text-[10px] text-base-content/50 uppercase tracking-wide">
+                                Success Screen
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content"
+                        onClick={onClose}
+                        aria-label="Close thank you page properties"
+                    >
+                        <LuX className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+                <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertyField
+                        label="Title"
+                        value={settings.title}
+                        onChange={(e) => handleSettingChange('title', e.target.value)}
+                        placeholder="Thank You!"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                        }}
+                    />
+                    
+                    <PropertyTextarea
+                        label="Message"
+                        value={settings.description}
+                        onChange={(e) => handleSettingChange('description', e.target.value)}
+                        placeholder="Your response has been submitted successfully."
+                        description="Shown below the title on the success screen."
+                    />
+                </PropertySection>
+
+                <PropertySection title="Effects" icon={<LuPartyPopper className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertyToggle
+                        label="Show Confetti"
+                        description="Celebrate with confetti animation"
+                        checked={settings.showConfetti}
+                        onChange={(e) => handleSettingChange('showConfetti', e.target.checked)}
+                    />
+                </PropertySection>
+
+                <PropertySection title="Button" icon={<LuMousePointer2 className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertyToggle
+                        label="Show Button"
+                        description="Display a call-to-action button"
+                        checked={settings.showButton}
+                        onChange={(e) => handleSettingChange('showButton', e.target.checked)}
+                    />
+                    
+                    {settings.showButton && (
+                        <>
+                            <PropertyField
+                                label="Button Text"
+                                value={settings.buttonText}
+                                onChange={(e) => handleSettingChange('buttonText', e.target.value)}
+                                placeholder="Submit another response"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") e.currentTarget.blur();
+                                }}
+                            />
+                            
+                            <PropertyField
+                                label="Button URL (optional)"
+                                value={settings.buttonUrl}
+                                onChange={(e) => handleSettingChange('buttonUrl', e.target.value)}
+                                placeholder="https://example.com"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") e.currentTarget.blur();
+                                }}
+                            />
+                            
+                            <p className="text-[10px] text-base-content/50 px-0.5">
+                                Leave empty to reload the form for another submission.
+                            </p>
+                        </>
+                    )}
+                </PropertySection>
+
+                <div className="px-4 py-3">
+                    <div className="p-3 bg-info/5 border border-info/20 rounded-lg">
+                        <p className="text-xs text-info/80">
+                            <strong className="font-medium">Tip:</strong> Preview your Thank You page in the Design tab to see how it will look to respondents.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
     );
 }

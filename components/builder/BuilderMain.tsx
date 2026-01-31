@@ -17,7 +17,7 @@ import { LeftPanel } from "./LeftPanel";
 import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
-import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle, DEFAULT_DESIGN_SETTINGS, migrateToRowFormat, FormRow, createRow } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle, DEFAULT_DESIGN_SETTINGS, DEFAULT_THANK_YOU_PAGE, migrateToRowFormat, FormRow, createRow } from "@/types/form-builder";
 import { FormSubmission } from "@/types/submission";
 import { useFormBuilder, DropPosition } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -66,6 +66,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             form.share_url,
             form.style || 'classic',
             form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
+            form.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...form.thank_you_page } : DEFAULT_THANK_YOU_PAGE,
             {
                 currentVersion: form.current_version || 1,
                 publishedAt: form.published_at || null,
@@ -76,6 +77,9 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 style: form.published_style,
                 designSettings: form.published_design_settings
                     ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings }
+                    : null,
+                thankYouPage: form.published_thank_you_page
+                    ? { ...DEFAULT_THANK_YOU_PAGE, ...form.published_thank_you_page }
                     : null,
             }
         );
@@ -131,10 +135,14 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 designSettings: form.published_design_settings
                     ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings }
                     : null,
+                thankYouPage: form.published_thank_you_page
+                    ? { ...DEFAULT_THANK_YOU_PAGE, ...form.published_thank_you_page }
+                    : null,
             } : {
                 content: null,
                 style: null,
                 designSettings: null,
+                thankYouPage: null,
             };
 
             // Set form metadata including style, versioning info, and published snapshot
@@ -144,6 +152,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 form.share_url,
                 form.style || 'classic',
                 form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
+                form.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...form.thank_you_page } : DEFAULT_THANK_YOU_PAGE,
                 {
                     currentVersion: form.current_version || 1,
                     publishedAt: form.published_at || null,

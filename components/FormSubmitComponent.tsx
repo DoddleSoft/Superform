@@ -1,15 +1,16 @@
 "use client";
 
-import { FormElementInstance, FormSection, FormContent, FormStyle, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, getSectionElements, migrateToRowFormat } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, FormStyle, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, getSectionElements, migrateToRowFormat, ThankYouPageSettings, DEFAULT_THANK_YOU_PAGE } from "@/types/form-builder";
 import { FormElements } from "@/components/builder/FormElements";
 import { useRef, useState, useTransition, useCallback, useEffect, useMemo } from "react";
 import { submitForm, savePartialSubmission } from "@/actions/form";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuChevronLeft, LuChevronRight, LuCheck } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight, LuCheck, LuExternalLink } from "react-icons/lu";
 import { ClassicRenderer } from "./renderers/ClassicRenderer";
 import { TypeformRenderer } from "./renderers/TypeformRenderer";
 import { getButtonStyle, FONT_FAMILY_MAP } from "@/lib/designUtils";
 import { useToast } from "@/context/ToastContext";
+import confetti from "canvas-confetti";
 
 // Generate a unique session ID for this form submission attempt
 function generateSessionId(): string {
@@ -22,6 +23,7 @@ interface FormSubmitComponentProps {
     content: FormContent; // Now expects Section[] format
     style?: FormStyle; // Form display style
     designSettings?: Partial<FormDesignSettings>; // Design settings
+    thankYouPage?: Partial<ThankYouPageSettings>; // Thank you page settings
     version?: number; // Form version for tracking
 }
 
@@ -31,9 +33,11 @@ export function FormSubmitComponent({
     content,
     style = 'classic', // Default to classic style
     designSettings = {},
+    thankYouPage = {},
     version = 1, // Default version
 }: FormSubmitComponentProps) {
     const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
+    const thankYouSettings = { ...DEFAULT_THANK_YOU_PAGE, ...thankYouPage };
     const toast = useToast();
     const formValues = useRef<{ [key: string]: string }>({});
     const formErrors = useRef<{ [key: string]: boolean }>({});
@@ -256,6 +260,32 @@ export function FormSubmitComponent({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isLastSection, handleNext, handleSubmit]);
 
+    // Trigger confetti on successful submission
+    useEffect(() => {
+        if (submitted && thankYouSettings.showConfetti) {
+            // Fire confetti from both sides
+            const count = 200;
+            const defaults = {
+                origin: { y: 0.7 },
+                colors: [settings.primaryColor, '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+            };
+
+            function fire(particleRatio: number, opts: confetti.Options) {
+                confetti({
+                    ...defaults,
+                    ...opts,
+                    particleCount: Math.floor(count * particleRatio),
+                });
+            }
+
+            fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 0.2, y: 0.7 } });
+            fire(0.2, { spread: 60, origin: { x: 0.4, y: 0.7 } });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.6, y: 0.7 } });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, origin: { x: 0.8, y: 0.7 } });
+            fire(0.1, { spread: 120, startVelocity: 45, origin: { x: 0.5, y: 0.7 } });
+        }
+    }, [submitted, thankYouSettings.showConfetti, settings.primaryColor]);
+
     // Animation variants
     const slideVariants = {
         enter: (direction: number) => ({
@@ -272,7 +302,19 @@ export function FormSubmitComponent({
         }),
     };
 
+    // Handle button click on thank you page
+    const handleThankYouButtonClick = () => {
+        if (thankYouSettings.buttonUrl) {
+            window.location.href = thankYouSettings.buttonUrl;
+        } else {
+            // Reload for another submission
+            window.location.reload();
+        }
+    };
+
     if (submitted) {
+        const buttonStyle = getButtonStyle(settings);
+        
         return (
             <div 
                 className="min-h-screen flex items-center justify-center p-4"
@@ -293,10 +335,22 @@ export function FormSubmitComponent({
                     >
                         <LuCheck className="w-8 h-8" style={{ color: settings.primaryColor }} />
                     </div>
-                    <h1 className="text-2xl font-bold mb-2" style={{ color: settings.textColor }}>Thank You!</h1>
+                    <h1 className="text-2xl font-bold mb-2" style={{ color: settings.textColor }}>
+                        {thankYouSettings.title}
+                    </h1>
                     <p style={{ color: settings.textColor, opacity: 0.6 }}>
-                        Your response has been submitted successfully. You can close this page now.
+                        {thankYouSettings.description}
                     </p>
+                    {thankYouSettings.showButton && (
+                        <button
+                            onClick={handleThankYouButtonClick}
+                            className="mt-6 px-6 py-2.5 font-medium rounded-lg transition-transform hover:scale-105 inline-flex items-center gap-2"
+                            style={buttonStyle}
+                        >
+                            {thankYouSettings.buttonText}
+                            {thankYouSettings.buttonUrl && <LuExternalLink className="w-4 h-4" />}
+                        </button>
+                    )}
                 </motion.div>
             </div>
         );

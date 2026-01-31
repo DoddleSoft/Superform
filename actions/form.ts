@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
-import type { Form, FormWithStats, PaginatedResponse, GetFormsParams, FormStyle, FormDesignSettings } from "@/types/form-builder";
+import type { Form, FormWithStats, PaginatedResponse, GetFormsParams, FormStyle, FormDesignSettings, ThankYouPageSettings } from "@/types/form-builder";
 
 // ============== Form CRUD Operations ==============
 
@@ -225,7 +225,7 @@ export async function publishForm(id: string, userId: string) {
     // First get the current form to access content and compare with published
     const { data: currentForm, error: fetchError } = await supabase
         .from("forms")
-        .select("content, style, design_settings, name, description, current_version, published_content, published_style, published_design_settings")
+        .select("content, style, design_settings, thank_you_page, name, description, current_version, published_content, published_style, published_design_settings, published_thank_you_page")
         .eq("id", id)
         .single();
 
@@ -236,7 +236,8 @@ export async function publishForm(id: string, userId: string) {
     // Check if content has actually changed from published version
     const contentChanged = JSON.stringify(currentForm.content) !== JSON.stringify(currentForm.published_content)
         || currentForm.style !== currentForm.published_style
-        || JSON.stringify(currentForm.design_settings) !== JSON.stringify(currentForm.published_design_settings);
+        || JSON.stringify(currentForm.design_settings) !== JSON.stringify(currentForm.published_design_settings)
+        || JSON.stringify(currentForm.thank_you_page) !== JSON.stringify(currentForm.published_thank_you_page);
     
     const now = new Date().toISOString();
     
@@ -253,6 +254,7 @@ export async function publishForm(id: string, userId: string) {
             published_content: currentForm.content,
             published_style: currentForm.style,
             published_design_settings: currentForm.design_settings,
+            published_thank_you_page: currentForm.thank_you_page,
             published_at: now,
             current_version: newVersion,
             has_unpublished_changes: false,
@@ -275,6 +277,7 @@ export async function publishForm(id: string, userId: string) {
                 content: currentForm.content,
                 style: currentForm.style || 'classic',
                 design_settings: currentForm.design_settings || {},
+                thank_you_page: currentForm.thank_you_page || {},
                 name: currentForm.name,
                 description: currentForm.description,
                 created_by: userId,
@@ -308,7 +311,7 @@ export async function getFormContentByUrl(formUrl: string) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
         .from("forms")
-        .select("id, published_content, name, description, published_style, published_design_settings, current_version") // Use published content for public view
+        .select("id, published_content, name, description, published_style, published_design_settings, published_thank_you_page, current_version") // Use published content for public view
         .eq("share_url", formUrl)
         .eq("published", true)
         .single();
@@ -325,6 +328,7 @@ export async function getFormContentByUrl(formUrl: string) {
         description: data.description,
         style: data.published_style,
         designSettings: data.published_design_settings,
+        thankYouPage: data.published_thank_you_page,
         version: data.current_version,
     };
 }
@@ -482,6 +486,23 @@ export async function saveFormDesignSettings(id: string, designSettings: FormDes
         .from("forms")
         .update({ 
             design_settings: designSettings,
+            has_unpublished_changes: true, // Mark as having unpublished changes
+        })
+        .eq("id", id);
+
+    if (error) {
+        throw error;
+    }
+}
+
+// ============== Thank You Page Operations ==============
+
+export async function saveThankYouPage(id: string, thankYouPage: ThankYouPageSettings) {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+        .from("forms")
+        .update({ 
+            thank_you_page: thankYouPage,
             has_unpublished_changes: true, // Mark as having unpublished changes
         })
         .eq("id", id);

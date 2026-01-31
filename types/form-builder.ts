@@ -20,6 +20,26 @@ export enum FormElementType {
 // 'typeform' - Typeform-like step-by-step experience with slide animations
 export type FormStyle = 'classic' | 'typeform';
 
+// Thank You Page Settings - customizable success/confirmation page
+export interface ThankYouPageSettings {
+    title: string;
+    description: string;
+    showConfetti: boolean;
+    buttonText: string;
+    buttonUrl: string; // Optional redirect URL
+    showButton: boolean;
+}
+
+// Default Thank You page settings
+export const DEFAULT_THANK_YOU_PAGE: ThankYouPageSettings = {
+    title: "Thank You!",
+    description: "Your response has been submitted successfully. You can close this page now.",
+    showConfetti: true,
+    buttonText: "Submit another response",
+    buttonUrl: "",
+    showButton: false,
+};
+
 // Font family options for forms
 export type FormFontFamily = 
     | 'system' 
@@ -163,6 +183,7 @@ export interface Form {
     published: boolean;
     style: FormStyle; // Draft style
     design_settings: FormDesignSettings; // Draft design settings
+    thank_you_page: ThankYouPageSettings; // Thank you page settings
     share_url: string | null;
     created_at: string;
     updated_at: string;
@@ -171,6 +192,7 @@ export interface Form {
     published_content: FormContent | null; // Content shown to end users
     published_style: FormStyle | null; // Style used for published form
     published_design_settings: FormDesignSettings | null; // Design settings for published form
+    published_thank_you_page: ThankYouPageSettings | null; // Thank you page for published form
     published_at: string | null; // When last published
     current_version: number; // Current published version (0 = never published)
     has_unpublished_changes: boolean; // True if draft differs from published

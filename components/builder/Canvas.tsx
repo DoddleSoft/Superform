@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { FormElementInstance, FormSection, FormRow, CanvasTab, getSectionElements } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormRow, CanvasTab, getSectionElements, ThankYouPageSettings, FormDesignSettings } from "@/types/form-builder";
 import { useDroppable, useDndContext } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -20,7 +20,8 @@ import {
     LuLayers,
     LuGripVertical,
     LuSparkles,
-    LuColumns2
+    LuColumns2,
+    LuPartyPopper
 } from "react-icons/lu";
 import { motion, AnimatePresence, elementVariants } from "@/lib/animations";
 import { ClassicRenderer } from "@/components/renderers/ClassicRenderer";
@@ -52,6 +53,9 @@ export function Canvas() {
         setCanvasTab,
         formStyle,
         designSettings,
+        thankYouPage,
+        isThankYouPageSelected,
+        setIsThankYouPageSelected,
     } = useFormBuilder();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -156,6 +160,7 @@ export function Canvas() {
                     if (!isDragging) {
                         setSelectedElement(null);
                         setSelectedSection(null);
+                        setIsThankYouPageSelected(false);
                     }
                 }}
             >
@@ -177,6 +182,18 @@ export function Canvas() {
                                 />
                             ))}
                         </AnimatePresence>
+
+                        {/* Thank You Page Card */}
+                        <ThankYouPageCard
+                            isSelected={isThankYouPageSelected}
+                            onClick={() => {
+                                setSelectedElement(null);
+                                setSelectedSection(null);
+                                setIsThankYouPageSelected(true);
+                            }}
+                            thankYouPage={thankYouPage}
+                            designSettings={designSettings}
+                        />
                     </div>
                 )}
 
@@ -186,6 +203,7 @@ export function Canvas() {
                         sections={sections}
                         formStyle={formStyle}
                         designSettings={designSettings}
+                        thankYouPage={thankYouPage}
                         previewDevice={previewDevice}
                         setPreviewDevice={setPreviewDevice}
                     />
@@ -377,6 +395,93 @@ function SectionCard({
                     </motion.div>
                 )}
             </AnimatePresence>
+        </motion.div>
+    );
+}
+
+// Thank You Page Card Component
+function ThankYouPageCard({
+    isSelected,
+    onClick,
+    thankYouPage,
+    designSettings,
+}: {
+    isSelected: boolean;
+    onClick: () => void;
+    thankYouPage: ThankYouPageSettings;
+    designSettings: FormDesignSettings;
+}) {
+    return (
+        <motion.div
+            layout
+            variants={elementVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative"
+            data-section
+        >
+            {/* Thank You Page Card */}
+            <div
+                className={`relative rounded-2xl border bg-base-100 shadow-sm transition-all duration-200 overflow-hidden cursor-pointer
+                    ${isSelected ? 'border-success shadow-md ring-2 ring-success/10' : 'border-base-200 hover:border-success/40'}
+                `}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClick();
+                }}
+            >
+                {/* Card Header */}
+                <div className={`px-4 py-3 border-b flex items-center gap-3 transition-colors ${isSelected ? 'bg-success/5 border-success/20' : 'bg-base-50/50 border-base-100'}`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold transition-colors
+                            ${isSelected ? 'bg-success text-success-content' : 'bg-success/20 text-success'}`}>
+                            <LuPartyPopper className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate text-base-content">
+                                Thank You Page
+                            </span>
+                            <span className="text-xs text-base-content/50">
+                                Shown after submission
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Thank You Page Preview */}
+                <div className="p-6 min-h-[150px] flex flex-col items-center justify-center text-center">
+                    <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+                        style={{ backgroundColor: `${designSettings.primaryColor}20` }}
+                    >
+                        <LuCheck className="w-6 h-6" style={{ color: designSettings.primaryColor }} />
+                    </div>
+                    <h3 className="text-lg font-bold mb-2" style={{ color: designSettings.textColor }}>
+                        {thankYouPage.title || "Thank You!"}
+                    </h3>
+                    <p className="text-sm max-w-xs" style={{ color: designSettings.textColor, opacity: 0.6 }}>
+                        {thankYouPage.description || "Your response has been submitted successfully."}
+                    </p>
+                    {thankYouPage.showButton && (
+                        <button
+                            className="mt-4 px-4 py-2 text-sm font-medium rounded-lg"
+                            style={{ 
+                                backgroundColor: designSettings.buttonColor, 
+                                color: designSettings.buttonTextColor 
+                            }}
+                        >
+                            {thankYouPage.buttonText || "Submit another response"}
+                        </button>
+                    )}
+                    {thankYouPage.showConfetti && (
+                        <div className="absolute top-2 right-2 px-2 py-1 bg-warning/10 text-warning text-[10px] font-medium rounded-full flex items-center gap-1">
+                            <LuSparkles className="w-3 h-3" />
+                            Confetti
+                        </div>
+                    )}
+                </div>
+            </div>
         </motion.div>
     );
 }
@@ -780,18 +885,20 @@ function SortableElement({ element, sectionId }: { element: FormElementInstance;
 }
 
 // Form Preview Component for Design Tab
-import { FormStyle, FormDesignSettings } from "@/types/form-builder";
+import { FormStyle } from "@/types/form-builder";
 
 interface FormPreviewProps {
     sections: FormSection[];
     formStyle: FormStyle;
     designSettings: FormDesignSettings;
+    thankYouPage: ThankYouPageSettings;
     previewDevice: DeviceType;
     setPreviewDevice: (device: DeviceType) => void;
 }
 
-function FormPreview({ sections, formStyle, designSettings, previewDevice, setPreviewDevice }: FormPreviewProps) {
+function FormPreview({ sections, formStyle, designSettings, thankYouPage, previewDevice, setPreviewDevice }: FormPreviewProps) {
     const [previewSection, setPreviewSection] = useState(0);
+    const [showThankYouPage, setShowThankYouPage] = useState(false);
     const deviceConfig = DEVICE_SIZES.find(d => d.id === previewDevice) || DEVICE_SIZES[2];
 
     const currentSection = sections[previewSection];
@@ -841,7 +948,12 @@ function FormPreview({ sections, formStyle, designSettings, previewDevice, setPr
                 {/* Form Content */}
                 {/* Form Content */}
                 <div className="relative h-[650px] bg-base-100 overflow-hidden form-preview-container">
-                    {formStyle === 'classic' ? (
+                    {showThankYouPage ? (
+                        <ThankYouPagePreview 
+                            thankYouPage={thankYouPage} 
+                            designSettings={designSettings} 
+                        />
+                    ) : formStyle === 'classic' ? (
                         <div className="h-full overflow-y-auto">
                             <ClassicRenderer
                                 sections={sections}
@@ -878,13 +990,79 @@ function FormPreview({ sections, formStyle, designSettings, previewDevice, setPr
                 </div>
             </motion.div>
 
-            {/* Style indicator */}
-            <div className="mt-5 flex items-center gap-2">
+            {/* Preview Toggle and Style indicator */}
+            <div className="mt-5 flex items-center gap-3">
+                {/* Thank You Page Toggle */}
+                <button
+                    onClick={() => setShowThankYouPage(!showThankYouPage)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-full shadow-sm transition-all
+                        ${showThankYouPage 
+                            ? 'bg-success text-success-content border-success' 
+                            : 'bg-base-100 text-base-content/60 border-base-200 hover:border-success/50'
+                        }`}
+                >
+                    <LuPartyPopper className="w-3 h-3" />
+                    Thank You Page
+                </button>
+
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-base-100 border border-base-200 text-base-content/60 text-xs font-medium rounded-full shadow-sm">
                     <LuSparkles className="w-3 h-3" />
                     {formStyle === 'classic' ? 'Classic' : 'Typeform'} Style
                 </span>
             </div>
+        </div>
+    );
+}
+
+// Thank You Page Preview Component
+function ThankYouPagePreview({
+    thankYouPage,
+    designSettings,
+}: {
+    thankYouPage: ThankYouPageSettings;
+    designSettings: FormDesignSettings;
+}) {
+    const { getButtonStyle } = require("@/lib/designUtils");
+    const buttonStyle = getButtonStyle(designSettings);
+
+    return (
+        <div 
+            className="h-full flex items-center justify-center p-4"
+            style={{ backgroundColor: designSettings.backgroundColor }}
+        >
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="max-w-md w-full rounded-2xl shadow-xl p-8 text-center relative"
+                style={{ backgroundColor: 'white' }}
+            >
+                {thankYouPage.showConfetti && (
+                    <div className="absolute -top-2 -right-2 px-2 py-1 bg-warning/10 text-warning text-[10px] font-medium rounded-full flex items-center gap-1 shadow">
+                        <LuSparkles className="w-3 h-3" />
+                        Confetti enabled
+                    </div>
+                )}
+                <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                    style={{ backgroundColor: `${designSettings.primaryColor}20` }}
+                >
+                    <LuCheck className="w-8 h-8" style={{ color: designSettings.primaryColor }} />
+                </div>
+                <h1 className="text-2xl font-bold mb-2" style={{ color: designSettings.textColor }}>
+                    {thankYouPage.title || "Thank You!"}
+                </h1>
+                <p style={{ color: designSettings.textColor, opacity: 0.6 }}>
+                    {thankYouPage.description || "Your response has been submitted successfully."}
+                </p>
+                {thankYouPage.showButton && (
+                    <button
+                        className="mt-6 px-6 py-2.5 font-medium rounded-lg transition-transform hover:scale-105"
+                        style={buttonStyle}
+                    >
+                        {thankYouPage.buttonText || "Submit another response"}
+                    </button>
+                )}
+            </motion.div>
         </div>
     );
 }

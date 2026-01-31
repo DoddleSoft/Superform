@@ -24,7 +24,7 @@ import {
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
 import { VersionHistoryModal } from "./VersionHistoryModal";
-import { DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { DEFAULT_DESIGN_SETTINGS, DEFAULT_THANK_YOU_PAGE } from "@/types/form-builder";
 import { useToast } from "@/context/ToastContext";
 
 export function BuilderHeader({
@@ -40,7 +40,7 @@ export function BuilderHeader({
     lastSavedAt: Date | null;
     formName?: string;
 }) {
-    const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl, sections, formStyle, designSettings, updatePublishedSnapshot } = useFormBuilder();
+    const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl, sections, formStyle, designSettings, thankYouPage, updatePublishedSnapshot } = useFormBuilder();
     const [loading, startTransition] = useTransition();
     const [showVersionHistory, setShowVersionHistory] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -111,6 +111,7 @@ export function BuilderHeader({
                         content: sections,
                         style: formStyle,
                         designSettings: designSettings,
+                        thankYouPage: thankYouPage,
                     });
                     
                     setFormMetadata(
@@ -119,6 +120,7 @@ export function BuilderHeader({
                         result.share_url,
                         result.style,
                         result.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...result.design_settings } : DEFAULT_DESIGN_SETTINGS,
+                        result.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...result.thank_you_page } : DEFAULT_THANK_YOU_PAGE,
                         {
                             currentVersion: result.current_version,
                             publishedAt: result.published_at,
