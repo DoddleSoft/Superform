@@ -1,7 +1,7 @@
 "use client";
 
 import { FormElements } from "@/components/builder/FormElements";
-import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow, getSectionElements } from "@/types/form-builder";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck, LuArrowDown, LuChevronDown } from "react-icons/lu";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -127,6 +127,9 @@ export function TypeformRenderer({
     onSectionChange,
     designSettings = {},
 }: TypeformRendererProps) {
+    // Filter out empty sections (sections with no elements)
+    const nonEmptySections = sections.filter(section => getSectionElements(section).length > 0);
+    
     const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
     const buttonStyle = getButtonStyle(settings);
     const questionSpacing = QUESTION_SPACING_MAP[settings.questionSpacing];
@@ -155,8 +158,8 @@ export function TypeformRenderer({
     // Use controlled index if provided, otherwise internal state
     const currentSectionIndex = controlledIndex !== undefined ? controlledIndex : internalIndex;
 
-    const currentSection = sections[currentSectionIndex];
-    const totalSections = sections.length;
+    const currentSection = nonEmptySections[currentSectionIndex];
+    const totalSections = nonEmptySections.length;
     const isFirstSection = currentSectionIndex === 0;
     const isLastSection = currentSectionIndex === totalSections - 1;
 

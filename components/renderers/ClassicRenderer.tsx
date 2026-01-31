@@ -106,6 +106,9 @@ export function ClassicRenderer({
     setRenderKey,
     designSettings = {},
 }: ClassicRendererProps) {
+    // Filter out empty sections (sections with no elements)
+    const nonEmptySections = sections.filter(section => getSectionElements(section).length > 0);
+    
     const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
     const wrapperStyle = getFormWrapperStyle(settings);
     const buttonStyle = getButtonStyle(settings);
@@ -145,7 +148,7 @@ export function ClassicRenderer({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} key={renderKey}>
                         {settings.showSections ? (
                             // Sectioned layout with cards
-                            sections.map((section, sectionIndex) => (
+                            nonEmptySections.map((section, sectionIndex) => (
                                 <motion.div
                                     key={section.id}
                                     initial={{ opacity: 0, y: 20 }}
@@ -203,7 +206,7 @@ export function ClassicRenderer({
                         ) : (
                             // Flat page layout - all rows directly on the page
                             <div style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }}>
-                                {sections.flatMap((section) =>
+                                {nonEmptySections.flatMap((section) =>
                                     section.rows?.map((row) => (
                                         <FormRowRenderer
                                             key={row.id}

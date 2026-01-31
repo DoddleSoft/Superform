@@ -57,25 +57,30 @@ export function FormSubmitComponent({
             return [];
         }
         
+        let rawSections: FormSection[];
+        
         // Check if it's the new row format
         if ((content[0] as any)?.rows !== undefined) {
-            return content as FormSection[];
+            rawSections = content as FormSection[];
         }
-        
         // Check if it's the old section format with elements
-        if ((content[0] as any)?.elements !== undefined) {
+        else if ((content[0] as any)?.elements !== undefined) {
             // Migrate each section to row format
-            return content.map((s: any) => migrateToRowFormat(s));
+            rawSections = content.map((s: any) => migrateToRowFormat(s));
+        }
+        // Old flat format - convert to section with rows
+        else {
+            const elements = content as unknown as FormElementInstance[];
+            const section = migrateToRowFormat({
+                id: "default",
+                title: "Form",
+                elements,
+            });
+            rawSections = [section];
         }
         
-        // Old flat format - convert to section with rows
-        const elements = content as unknown as FormElementInstance[];
-        const section = migrateToRowFormat({
-            id: "default",
-            title: "Form",
-            elements,
-        });
-        return [section];
+        // Filter out empty sections (sections with no elements)
+        return rawSections.filter(section => getSectionElements(section).length > 0);
     }, [content]);
 
     const currentSection = sections[currentSectionIndex];
