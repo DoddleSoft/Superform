@@ -22,6 +22,7 @@ const PHONE_REGEX = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9
 const extraAttributes = {
     label: "Phone Number",
     helperText: "Enter your phone number",
+    showHelperText: false,
     required: false,
     placeholder: "+1 (555) 000-0000",
 };
@@ -29,6 +30,7 @@ const extraAttributes = {
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
+    showHelperText: z.boolean(),
     required: z.boolean(),
     placeholder: z.string().max(50),
 });
@@ -64,7 +66,7 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, placeholder, helperText, showHelperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-2 w-full">
@@ -80,7 +82,7 @@ function DesignerComponent({ element }: { element: FormElementInstance }) {
                 className="input input-bordered w-full"
                 placeholder={placeholder}
             />
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
         </div>
@@ -108,7 +110,7 @@ function FormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, placeholder, helperText, showHelperText } = elementInstance.extraAttributes || extraAttributes;
 
     const validateAndSubmit = (val: string) => {
         if (!submitValue) return;
@@ -148,7 +150,7 @@ function FormComponent({
             {errorMessage && (
                 <p className="form-field-helper text-sm text-error">{errorMessage}</p>
             )}
-            {!errorMessage && helperText && (
+            {!errorMessage && showHelperText && helperText && (
                 <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
@@ -171,6 +173,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         defaultValues: {
             label: defaults.label,
             helperText: defaults.helperText,
+            showHelperText: defaults.showHelperText,
             required: defaults.required,
             placeholder: defaults.placeholder,
         },
@@ -181,12 +184,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
-        const { label, helperText, required, placeholder } = values;
+        const { label, helperText, showHelperText, required, placeholder } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
             extraAttributes: {
                 label,
                 helperText,
+                showHelperText,
                 required,
                 placeholder,
             },
@@ -222,6 +226,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
+
+                <PropertyToggle
+                    label="Show Helper Text"
+                    description="Display the helper text below the field"
+                    {...form.register("showHelperText")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
+                />
             </PropertySection>
 
             <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
@@ -229,6 +240,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Required"
                     description="Users must fill this field to submit"
                     {...form.register("required")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
         </form>

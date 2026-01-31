@@ -7,14 +7,26 @@ interface PropertyToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>
     label: string;
     description?: string;
     size?: "sm" | "md";
+    onToggleChange?: (checked: boolean) => void;
 }
 
 export const PropertyToggle = forwardRef<HTMLInputElement, PropertyToggleProps>(
     function PropertyToggle(
-        { label, description, size = "sm", className = "", ...props },
+        { label, description, size = "sm", className = "", onToggleChange, onChange, ...props },
         ref
     ) {
         const toggleSizeClass = size === "sm" ? "toggle-sm" : "";
+        
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            // Call the original onChange from react-hook-form register
+            if (onChange) {
+                onChange(e);
+            }
+            // Also call the immediate change handler if provided
+            if (onToggleChange) {
+                onToggleChange(e.target.checked);
+            }
+        };
         
         return (
             <div className="flex items-start justify-between gap-3 py-1">
@@ -39,6 +51,7 @@ export const PropertyToggle = forwardRef<HTMLInputElement, PropertyToggleProps>(
                         toggle toggle-primary ${toggleSizeClass}
                         ${className}
                     `}
+                    onChange={handleChange}
                     {...props}
                 />
             </div>

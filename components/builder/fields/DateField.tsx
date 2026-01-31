@@ -17,6 +17,7 @@ const type: FormElementType = FormElementType.DATE;
 const extraAttributes = {
     label: "Date Field",
     helperText: "Pick a date",
+    showHelperText: false,
     required: false,
     includeTime: false,
 };
@@ -24,6 +25,7 @@ const extraAttributes = {
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
+    showHelperText: z.boolean(),
     required: z.boolean(),
     includeTime: z.boolean(),
 });
@@ -55,7 +57,7 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-2 w-full">
@@ -71,7 +73,7 @@ function DesignerComponent({ element }: { element: FormElementInstance }) {
                     <input readOnly disabled type="time" className="input input-bordered w-32" />
                 )}
             </div>
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
         </div>
@@ -90,7 +92,7 @@ function FormComponent({
     defaultValue?: string;
 }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, includeTime } = elementInstance.extraAttributes || extraAttributes;
 
     // Parse default value for date and time
     const parseDefaultValue = () => {
@@ -162,7 +164,7 @@ function FormComponent({
                     />
                 )}
             </div>
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
@@ -185,6 +187,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         defaultValues: {
             label: defaults.label,
             helperText: defaults.helperText,
+            showHelperText: defaults.showHelperText,
             required: defaults.required,
             includeTime: defaults.includeTime,
         },
@@ -195,9 +198,16 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
+        const { label, helperText, showHelperText, required, includeTime } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
-            extraAttributes: values,
+            extraAttributes: {
+                label,
+                helperText,
+                showHelperText,
+                required,
+                includeTime,
+            },
         });
     }
 
@@ -221,6 +231,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
+
+                <PropertyToggle
+                    label="Show Helper Text"
+                    description="Display the helper text below the field"
+                    {...form.register("showHelperText")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
+                />
             </PropertySection>
 
             <PropertySection title="Options" icon={<LuSettings className="w-3.5 h-3.5" />}>
@@ -228,6 +245,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Include Time"
                     description="Add a time picker alongside date"
                     {...form.register("includeTime")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
 
@@ -236,6 +254,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Required"
                     description="Users must fill this field to submit"
                     {...form.register("required")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
         </form>

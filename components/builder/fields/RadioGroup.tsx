@@ -21,6 +21,7 @@ const type: FormElementType = FormElementType.RADIO_GROUP;
 const extraAttributes = {
     label: "Single Choice",
     helperText: "Select one option",
+    showHelperText: false,
     required: false,
     options: ["Option 1", "Option 2", "Option 3"],
 };
@@ -28,6 +29,7 @@ const extraAttributes = {
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
+    showHelperText: z.boolean(),
     required: z.boolean(),
     options: z.array(z.string()).min(1),
 });
@@ -58,7 +60,7 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, options } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-2 w-full">
@@ -78,7 +80,7 @@ function DesignerComponent({ element }: { element: FormElementInstance }) {
                     <span className="text-xs text-base-content/50">+{options.length - 3} more options</span>
                 )}
             </div>
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
         </div>
@@ -104,7 +106,7 @@ function FormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, helperText, options } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-4 w-full">
@@ -150,7 +152,7 @@ function FormComponent({
                 })}
             </div>
 
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
@@ -173,6 +175,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         defaultValues: {
             label: defaults.label,
             helperText: defaults.helperText,
+            showHelperText: defaults.showHelperText,
             required: defaults.required,
             options: defaults.options,
         },
@@ -188,9 +191,16 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
+        const { label, helperText, showHelperText, required, options } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
-            extraAttributes: values,
+            extraAttributes: {
+                label,
+                helperText,
+                showHelperText,
+                required,
+                options,
+            },
         });
     }
 
@@ -214,6 +224,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
+
+                <PropertyToggle
+                    label="Show Helper Text"
+                    description="Display the helper text below the field"
+                    {...form.register("showHelperText")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
+                />
             </PropertySection>
 
             <PropertySection title="Options" icon={<LuList className="w-3.5 h-3.5" />}>
@@ -231,6 +248,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Required"
                     description="Users must select an option to submit"
                     {...form.register("required")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
         </form>

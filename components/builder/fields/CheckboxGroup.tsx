@@ -21,6 +21,7 @@ const type: FormElementType = FormElementType.CHECKBOX_GROUP;
 const extraAttributes = {
     label: "Multiple Choice",
     helperText: "Select all that apply",
+    showHelperText: false,
     required: false,
     minSelect: 0,
     maxSelect: 0, // 0 means no limit
@@ -30,6 +31,7 @@ const extraAttributes = {
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
+    showHelperText: z.boolean(),
     required: z.boolean(),
     minSelect: z.number().min(0),
     maxSelect: z.number().min(0),
@@ -78,7 +80,7 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, options } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex flex-col gap-2 w-full">
@@ -98,7 +100,7 @@ function DesignerComponent({ element }: { element: FormElementInstance }) {
                     <span className="text-xs text-base-content/50">+{options.length - 3} more options</span>
                 )}
             </div>
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
             )}
         </div>
@@ -130,7 +132,7 @@ function FormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, helperText, options, minSelect, maxSelect } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options, minSelect, maxSelect } = elementInstance.extraAttributes || extraAttributes;
 
     const toggleOption = (option: string) => {
         let newValues: string[];
@@ -210,7 +212,7 @@ function FormComponent({
             {selectionHint && (
                 <p className="form-field-helper text-xs text-[#262627]/50">{selectionHint}</p>
             )}
-            {helperText && (
+            {showHelperText && helperText && (
                 <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
@@ -233,6 +235,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         defaultValues: {
             label: defaults.label,
             helperText: defaults.helperText,
+            showHelperText: defaults.showHelperText,
             required: defaults.required,
             minSelect: defaults.minSelect,
             maxSelect: defaults.maxSelect,
@@ -250,9 +253,18 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
+        const { label, helperText, showHelperText, required, minSelect, maxSelect, options } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
-            extraAttributes: values,
+            extraAttributes: {
+                label,
+                helperText,
+                showHelperText,
+                required,
+                minSelect,
+                maxSelect,
+                options,
+            },
         });
     }
 
@@ -275,6 +287,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
+                />
+
+                <PropertyToggle
+                    label="Show Helper Text"
+                    description="Display the helper text below the field"
+                    {...form.register("showHelperText")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
 
@@ -318,6 +337,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Required"
                     description="Users must select at least one option to submit"
                     {...form.register("required")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
         </form>

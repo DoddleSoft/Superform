@@ -18,12 +18,14 @@ const type: FormElementType = FormElementType.CHECKBOX;
 const extraAttributes = {
     label: "Checkbox",
     helperText: "Check this box",
+    showHelperText: false,
     required: false,
 };
 
 const propertiesSchema = z.object({
     label: z.string().min(2).max(50),
     helperText: z.string().max(200),
+    showHelperText: z.boolean(),
     required: z.boolean(),
 });
 
@@ -54,7 +56,7 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
         <div className="flex items-start gap-2 w-full">
@@ -64,7 +66,7 @@ function DesignerComponent({ element }: { element: FormElementInstance }) {
                     {label}
                     {required && <span className="text-red-500">*</span>}
                 </label>
-                {helperText && (
+                {showHelperText && helperText && (
                     <p className="text-[0.8rem] text-base-content/70">{helperText}</p>
                 )}
             </div>
@@ -91,7 +93,7 @@ function FormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, helperText } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText } = elementInstance.extraAttributes || extraAttributes;
     const id = `checkbox-${element.id}`;
 
     return (
@@ -125,7 +127,7 @@ function FormComponent({
                         {label}
                         {required && <span className="text-error ml-1">*</span>}
                     </span>
-                    {helperText && (
+                    {showHelperText && helperText && (
                         <span className={`form-field-helper text-xs md:text-sm text-[#262627]/60 ${error ? "text-error" : ""}`}>
                             {helperText}
                         </span>
@@ -150,6 +152,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         defaultValues: {
             label: defaults.label,
             helperText: defaults.helperText,
+            showHelperText: defaults.showHelperText,
             required: defaults.required,
         },
     });
@@ -159,12 +162,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }, [element, form]);
 
     function applyChanges(values: propertiesFormSchemaType) {
-        const { label, helperText, required } = values;
+        const { label, helperText, showHelperText, required } = values;
         updateElementById(elementInstance.id, {
             ...elementInstance,
             extraAttributes: {
                 label,
                 helperText,
+                showHelperText,
                 required,
             },
         });
@@ -190,6 +194,13 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
+
+                <PropertyToggle
+                    label="Show Helper Text"
+                    description="Display the helper text below the field"
+                    {...form.register("showHelperText")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
+                />
             </PropertySection>
 
             <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
@@ -197,6 +208,7 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
                     label="Required"
                     description="Users must check this to submit"
                     {...form.register("required")}
+                    onToggleChange={() => form.handleSubmit(applyChanges)()}
                 />
             </PropertySection>
         </form>
