@@ -314,6 +314,15 @@ function SectionPropertiesView({
                     />
                 </PropertySection>
 
+                <PropertySection title="Display" icon={<LuSettings className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertyToggle
+                        label="Show Section Title"
+                        description="Display the section title to form respondents"
+                        checked={section.showTitle ?? false}
+                        onChange={(e) => onUpdate({ showTitle: e.target.checked })}
+                    />
+                </PropertySection>
+
                 <div className="px-4 py-3">
                     <div className="p-3 bg-info/5 border border-info/20 rounded-lg">
                         <p className="text-xs text-info/80">

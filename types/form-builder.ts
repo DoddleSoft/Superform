@@ -98,6 +98,7 @@ export interface FormSection {
     id: string;
     title: string;
     description?: string;
+    showTitle?: boolean; // Whether to show section title to end users (default: false)
     elements: FormElementInstance[];
 }
 
@@ -110,6 +111,7 @@ export function createSection(id: string, title?: string): FormSection {
         id,
         title: title || "Untitled Section",
         description: "",
+        showTitle: false,
         elements: [],
     };
 }

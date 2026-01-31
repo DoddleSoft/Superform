@@ -231,24 +231,26 @@ export function TypeformRenderer({
                             transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
                             className="w-full flex flex-col gap-8"
                         >
-                            {/* Section Question / Header */}
-                            <div>
-                                <h1 
-                                    className="form-section-title text-3xl md:text-4xl lg:text-5xl font-light leading-tight mb-4"
-                                    style={{ color: settings.textColor }}
-                                >
-                                    {currentSection.title}
-                                </h1>
-
-                                {currentSection.description && (
-                                    <p 
-                                        className="form-section-description text-xl md:text-2xl font-light mt-2 pl-24 md:pl-0"
-                                        style={{ color: settings.textColor, opacity: 0.7 }}
+                            {/* Section Question / Header - only show if showTitle is enabled */}
+                            {currentSection.showTitle && (
+                                <div>
+                                    <h1 
+                                        className="form-section-title text-3xl md:text-4xl lg:text-5xl font-light leading-tight mb-4"
+                                        style={{ color: settings.textColor }}
                                     >
-                                        {currentSection.description}
-                                    </p>
-                                )}
-                            </div>
+                                        {currentSection.title}
+                                    </h1>
+
+                                    {currentSection.description && (
+                                        <p 
+                                            className="form-section-description text-xl md:text-2xl font-light mt-2 pl-24 md:pl-0"
+                                            style={{ color: settings.textColor, opacity: 0.7 }}
+                                        >
+                                            {currentSection.description}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Form Fields Area */}
                             <div key={renderKey} style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }} className="w-full">
