@@ -344,22 +344,34 @@ export async function submitForm(
     const supabase = await createSupabaseServerClient();
     const data = JSON.parse(jsonContent);
 
-    // If we have a session ID, update the existing partial submission to complete
+    // If we have a session ID, try to update the existing partial submission first
     if (sessionId) {
-        const { error: updateError } = await supabase
+        // First check if a row with this session_id exists
+        const { data: existing } = await supabase
             .from("form_submissions")
-            .update({
-                data,
-                is_complete: true,
-                last_section_index: totalSections || 1,
-                total_sections: totalSections || 1,
-                form_version: formVersion || 1,
-                form_content_snapshot: formContentSnapshot || null,
-            })
-            .eq("session_id", sessionId);
+            .select("id")
+            .eq("session_id", sessionId)
+            .single();
 
-        if (updateError) {
-            // If update fails (no existing row), insert new
+        if (existing) {
+            // Update existing submission
+            const { error: updateError } = await supabase
+                .from("form_submissions")
+                .update({
+                    data,
+                    is_complete: true,
+                    last_section_index: totalSections || 1,
+                    total_sections: totalSections || 1,
+                    form_version: formVersion || 1,
+                    form_content_snapshot: formContentSnapshot || null,
+                })
+                .eq("session_id", sessionId);
+
+            if (updateError) {
+                throw updateError;
+            }
+        } else {
+            // No existing row, insert new
             const { error: insertError } = await supabase
                 .from("form_submissions")
                 .insert({

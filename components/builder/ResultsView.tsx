@@ -16,6 +16,7 @@ import {
     LuInbox,
     LuFileSpreadsheet,
     LuSparkles,
+    LuRadio,
 } from "react-icons/lu";
 import {
     VersionFilter,
@@ -23,6 +24,7 @@ import {
     SubmissionDetailModal,
     Column,
 } from "./results";
+import { useRealtimeSubmissions } from "@/hooks/useRealtimeSubmissions";
 
 type FilterMode = "all" | "complete" | "partial";
 
@@ -59,8 +61,12 @@ function extractColumnsFromSections(sections: FormSection[]): Column[] {
     return cols;
 }
 
-export function ResultsView({ submissions }: { submissions: FormSubmission[] }) {
-    const { sections } = useFormBuilder();
+export function ResultsView({ submissions: initialSubmissions }: { submissions: FormSubmission[] }) {
+    const { sections, formId } = useFormBuilder();
+    
+    // Use realtime hook for live updates (only if formId is available)
+    const { submissions, isConnected } = useRealtimeSubmissions(formId || '', initialSubmissions);
+    
     const [filterMode, setFilterMode] = useState<FilterMode>("all");
     const [selectedVersions, setSelectedVersions] = useState<number[]>([]);
     const [selectedSubmission, setSelectedSubmission] =
@@ -198,6 +204,7 @@ export function ResultsView({ submissions }: { submissions: FormSubmission[] }) 
                 availableVersions={availableVersions}
                 selectedVersions={selectedVersions}
                 onVersionChange={setSelectedVersions}
+                isRealtimeConnected={isConnected}
             />
 
             {/* Content */}
@@ -235,6 +242,7 @@ function Toolbar({
     availableVersions,
     selectedVersions,
     onVersionChange,
+    isRealtimeConnected,
 }: {
     filterMode: FilterMode;
     setFilterMode: (mode: FilterMode) => void;
@@ -243,10 +251,24 @@ function Toolbar({
     availableVersions: number[];
     selectedVersions: number[];
     onVersionChange: (versions: number[]) => void;
+    isRealtimeConnected: boolean;
 }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-b border-base-200 bg-base-100">
             <div className="flex items-center gap-3 flex-wrap">
+                {/* Realtime Status Indicator */}
+                <div 
+                    className="flex items-center gap-1.5 tooltip tooltip-bottom" 
+                    data-tip={isRealtimeConnected ? "Live updates enabled" : "Connecting..."}
+                >
+                    <LuRadio className={`w-4 h-4 ${isRealtimeConnected ? 'text-success animate-pulse' : 'text-base-content/30'}`} />
+                    <span className={`text-xs font-medium ${isRealtimeConnected ? 'text-success' : 'text-base-content/40'}`}>
+                        {isRealtimeConnected ? 'Live' : '...'}
+                    </span>
+                </div>
+
+                <div className="h-5 w-px bg-base-200 hidden sm:block" />
+
                 {/* Version Filter */}
                 <VersionFilter
                     versions={availableVersions}
