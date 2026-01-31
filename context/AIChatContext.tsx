@@ -53,6 +53,9 @@ export type FormToolAction =
     | { type: "updateDesignSettings"; settings: Partial<FormDesignSettings> }
     | { type: "updateThankYouPage"; settings: Partial<ThankYouPageSettings> };
 
+// Workflow step types for agentic behavior
+export type WorkflowStep = "fields" | "sections" | "style" | "design" | "thankYou";
+
 interface AIChatContextType {
     // Sidebar visibility
     isSidebarOpen: boolean;
@@ -81,6 +84,9 @@ interface AIChatContextType {
     // Applied state
     appliedMessageIds: Set<string>;
     markMessageApplied: (messageId: string) => Promise<void>;
+    
+    // Agentic workflow
+    denyChanges: (messageId: string, actions: FormToolAction[]) => void;
 }
 
 const AIChatContext = createContext<AIChatContextType | null>(null);
@@ -692,6 +698,20 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
             let formReplaced = false;
 
             for (const action of actions) {
+                // Handle style/design actions directly since they don't affect sections
+                if (action.type === "updateFormStyle") {
+                    setFormStyle(action.style);
+                    continue;
+                }
+                if (action.type === "updateDesignSettings") {
+                    setDesignSettings((prev) => ({ ...prev, ...action.settings }));
+                    continue;
+                }
+                if (action.type === "updateThankYouPage") {
+                    setThankYouPage((prev) => ({ ...prev, ...action.settings }));
+                    continue;
+                }
+
                 const result = applyFormAction(action, sections);
                 if (result) {
                     sections = result;
@@ -707,7 +727,6 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 } else if (action.type === "deleteSection") {
                     deletedSectionIds.push(action.sectionId);
                 }
-                // Style/design actions are handled within applyFormAction and don't need tracking
             }
 
             setSections(sections);
@@ -741,7 +760,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 });
             }
         },
-        [currentSections, applyFormAction, setSections, selectedElement, setSelectedElement, selectedSection, setSelectedSection]
+        [currentSections, applyFormAction, setSections, selectedElement, setSelectedElement, selectedSection, setSelectedSection, setFormStyle, setDesignSettings, setThankYouPage]
     );
 
     // Mark a message's actions as applied (persists to database)
@@ -760,6 +779,34 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
             }
         },
         []
+    );
+
+    // Get a human-readable description of action type for workflow context
+    const getActionStepName = useCallback((actions: FormToolAction[]): string => {
+        const types = actions.map(a => a.type);
+        if (types.includes("replaceForm") || types.includes("addFields") || types.includes("addSection")) {
+            return "form structure/fields";
+        }
+        if (types.includes("updateFormStyle")) {
+            return "form style";
+        }
+        if (types.includes("updateDesignSettings")) {
+            return "design settings";
+        }
+        if (types.includes("updateThankYouPage")) {
+            return "thank you page";
+        }
+        return "changes";
+    }, []);
+
+    // Deny changes and ask AI what to do instead
+    const denyChanges = useCallback(
+        (messageId: string, actions: FormToolAction[]) => {
+            const stepName = getActionStepName(actions);
+            // Send a message to the AI indicating the user denied the changes
+            sendMessage({ text: `I don't like these ${stepName}. What else can you suggest?` });
+        },
+        [sendMessage, getActionStepName]
     );
 
     const value: AIChatContextType = {
@@ -781,6 +828,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         applyMultipleActions,
         appliedMessageIds,
         markMessageApplied,
+        denyChanges,
     };
 
     return <AIChatContext.Provider value={value}>{children}</AIChatContext.Provider>;

@@ -60,7 +60,8 @@ type CustomInstance = FormElementInstance & {
 
 function DesignerComponent({ element }: { element: FormElementInstance }) {
     const elementInstance = element as CustomInstance;
-    const { label, required, helperText, showHelperText, options } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options: rawOptions } = elementInstance.extraAttributes || extraAttributes;
+    const options = rawOptions || ["Option 1", "Option 2", "Option 3"];
 
     return (
         <div className="flex flex-col gap-2 w-full">
@@ -106,7 +107,8 @@ function FormComponent({
         setError(isInvalid === true);
     }, [isInvalid]);
 
-    const { label, required, helperText, showHelperText, options } = elementInstance.extraAttributes || extraAttributes;
+    const { label, required, helperText, showHelperText, options: rawOptions } = elementInstance.extraAttributes || extraAttributes;
+    const options = rawOptions || [];
 
     return (
         <div className="flex flex-col gap-4 w-full">
