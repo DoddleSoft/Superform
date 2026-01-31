@@ -20,7 +20,7 @@ import {
     ChatSession,
 } from "@/actions/chat";
 import { useFormBuilder } from "./FormBuilderContext";
-import { FormElementType, FormElementInstance, FormSection, createSection, FormRow, createRow, getSectionElements } from "@/types/form-builder";
+import { FormElementType, FormElementInstance, FormSection, createSection, FormRow, createRow, getSectionElements, FormStyle, FormDesignSettings, ThankYouPageSettings } from "@/types/form-builder";
 import {
     GeneratedFormElement,
     DeleteFieldsInput,
@@ -28,6 +28,13 @@ import {
     ReplaceFormInput,
     ReorderFieldsInput,
     GeneratedSectionWithId,
+    AddSectionInput,
+    UpdateSectionInput,
+    DeleteSectionInput,
+    AddElementsToRowInput,
+    UpdateFormStyleInput,
+    UpdateDesignSettingsInput,
+    UpdateThankYouPageInput,
 } from "@/lib/formElementSchema";
 
 // Tool action types
@@ -36,7 +43,15 @@ export type FormToolAction =
     | { type: "deleteFields"; fieldIds: string[] }
     | { type: "updateField"; fieldId: string; updates: UpdateFieldInput["updates"] }
     | { type: "replaceForm"; sections: GeneratedSectionWithId[] }
-    | { type: "reorderFields"; sectionId: string; fieldIds: string[] };
+    | { type: "reorderFields"; sectionId: string; fieldIds: string[] }
+    | { type: "addSection"; title: string; description?: string; showTitle?: boolean; insertAfterSectionId?: string; elements?: GeneratedFormElement[] }
+    | { type: "updateSection"; sectionId: string; updates: { title?: string; description?: string; showTitle?: boolean } }
+    | { type: "deleteSection"; sectionId: string }
+    | { type: "reorderSections"; sectionIds: string[] }
+    | { type: "addElementToRow"; sectionId: string; targetElementId: string; position: "left" | "right"; element: GeneratedFormElement }
+    | { type: "updateFormStyle"; style: FormStyle }
+    | { type: "updateDesignSettings"; settings: Partial<FormDesignSettings> }
+    | { type: "updateThankYouPage"; settings: Partial<ThankYouPageSettings> };
 
 interface AIChatContextType {
     // Sidebar visibility
@@ -90,7 +105,26 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
     const [isSessionReady, setIsSessionReady] = useState(false);
     const [appliedMessageIds, setAppliedMessageIds] = useState<Set<string>>(new Set());
 
-    const { setSections, sections: currentSections, currentSectionId, selectedElement, setSelectedElement } = useFormBuilder();
+    const { 
+        setSections, 
+        sections: currentSections, 
+        currentSectionId, 
+        selectedElement, 
+        setSelectedElement,
+        addSection: addSectionToForm,
+        updateSection: updateSectionInForm,
+        removeSection: removeSectionFromForm,
+        reorderSections: reorderSectionsInForm,
+        addElementToRow: addElementToRowInForm,
+        formStyle,
+        setFormStyle,
+        designSettings,
+        setDesignSettings,
+        thankYouPage,
+        setThankYouPage,
+        selectedSection,
+        setSelectedSection,
+    } = useFormBuilder();
 
     // Initialize chat session
     useEffect(() => {
@@ -131,12 +165,17 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         id: section.id,
                         title: section.title,
                         description: section.description,
-                        // Flatten rows to elements for AI context
-                        elements: getSectionElements(section).map((el) => ({
-                            id: el.id,
-                            type: el.type,
-                            extraAttributes: el.extraAttributes,
-                        })),
+                        showTitle: section.showTitle,
+                        // Include row info for side-by-side understanding
+                        elements: section.rows.flatMap((row, rowIndex) => 
+                            row.elements.map((el, elIndex) => ({
+                                id: el.id,
+                                type: el.type,
+                                extraAttributes: el.extraAttributes,
+                                rowId: row.id,
+                                rowPosition: elIndex, // 0 = first in row, 1 = second (side-by-side)
+                            }))
+                        ),
                     })),
                 };
                 return fetch(url, {
@@ -493,11 +532,154 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                     if (!existingSections) setSections(result);
                     return result;
                 }
+                case "addSection": {
+                    const newSection: FormSection = {
+                        id: crypto.randomUUID(),
+                        title: action.title,
+                        description: action.description,
+                        showTitle: action.showTitle,
+                        rows: action.elements 
+                            ? action.elements.map((el) => createRow(crypto.randomUUID(), {
+                                id: crypto.randomUUID(),
+                                type: el.type as FormElementType,
+                                extraAttributes: el.extraAttributes,
+                            }))
+                            : [],
+                    };
+                    
+                    let result: FormSection[];
+                    if (action.insertAfterSectionId) {
+                        const insertIndex = workingSections.findIndex(s => s.id === action.insertAfterSectionId);
+                        if (insertIndex !== -1) {
+                            result = [
+                                ...workingSections.slice(0, insertIndex + 1),
+                                newSection,
+                                ...workingSections.slice(insertIndex + 1),
+                            ];
+                        } else {
+                            result = [...workingSections, newSection];
+                        }
+                    } else {
+                        result = [...workingSections, newSection];
+                    }
+                    
+                    if (!existingSections) setSections(result);
+                    return result;
+                }
+                case "updateSection": {
+                    const result = workingSections.map((section) => {
+                        if (section.id === action.sectionId) {
+                            return {
+                                ...section,
+                                ...action.updates,
+                            };
+                        }
+                        return section;
+                    });
+                    if (!existingSections) {
+                        setSections(result);
+                        // Update selectedSection if it's the one being updated
+                        if (selectedSection?.id === action.sectionId) {
+                            setSelectedSection((prev) => prev ? { ...prev, ...action.updates } : null);
+                        }
+                    }
+                    return result;
+                }
+                case "deleteSection": {
+                    const result = workingSections.filter((section) => section.id !== action.sectionId);
+                    if (!existingSections) {
+                        setSections(result);
+                        // Clear selections if they belonged to deleted section
+                        if (selectedSection?.id === action.sectionId) {
+                            setSelectedSection(null);
+                        }
+                        if (selectedElement) {
+                            const wasInDeletedSection = workingSections
+                                .find(s => s.id === action.sectionId)
+                                ?.rows.some(r => r.elements.some(el => el.id === selectedElement.id));
+                            if (wasInDeletedSection) {
+                                setSelectedElement(null);
+                            }
+                        }
+                    }
+                    return result;
+                }
+                case "reorderSections": {
+                    const sectionMap = new Map(workingSections.map((s) => [s.id, s]));
+                    const result = action.sectionIds
+                        .map((id) => sectionMap.get(id))
+                        .filter((s): s is FormSection => s !== undefined);
+                    // Add any sections not in the reorder list at the end
+                    for (const section of workingSections) {
+                        if (!action.sectionIds.includes(section.id)) {
+                            result.push(section);
+                        }
+                    }
+                    if (!existingSections) setSections(result);
+                    return result;
+                }
+                case "addElementToRow": {
+                    const newElement: FormElementInstance = {
+                        id: crypto.randomUUID(),
+                        type: action.element.type as FormElementType,
+                        extraAttributes: action.element.extraAttributes,
+                    };
+                    
+                    const result = workingSections.map((section) => {
+                        if (section.id !== action.sectionId) return section;
+                        
+                        return {
+                            ...section,
+                            rows: section.rows.map((row) => {
+                                // Find the row containing the target element
+                                const hasTarget = row.elements.some((el) => el.id === action.targetElementId);
+                                if (!hasTarget) return row;
+                                
+                                // Check if row already has 2 elements
+                                if (row.elements.length >= 2) return row;
+                                
+                                // Add element to the appropriate position
+                                const newElements = action.position === "left"
+                                    ? [newElement, ...row.elements]
+                                    : [...row.elements, newElement];
+                                
+                                return { ...row, elements: newElements };
+                            }),
+                        };
+                    });
+                    
+                    if (!existingSections) {
+                        setSections(result);
+                        setSelectedElement(newElement);
+                    }
+                    return result;
+                }
+                case "updateFormStyle": {
+                    // This doesn't modify sections, but we handle it here for consistency
+                    if (!existingSections) {
+                        setFormStyle(action.style);
+                    }
+                    return workingSections;
+                }
+                case "updateDesignSettings": {
+                    // This doesn't modify sections, but we handle it here for consistency
+                    if (!existingSections) {
+                        setDesignSettings((prev) => ({ ...prev, ...action.settings }));
+                    }
+                    return workingSections;
+                }
+                case "updateThankYouPage": {
+                    // This doesn't modify sections, but we handle it here for consistency
+                    if (!existingSections) {
+                        setThankYouPage((prev) => ({ ...prev, ...action.settings }));
+                    }
+                    return workingSections;
+                }
                 default:
                     return workingSections;
             }
         },
-        [currentSections, currentSectionId, setSections, findElementSection, selectedElement, setSelectedElement]
+        [currentSections, currentSectionId, setSections, findElementSection, selectedElement, setSelectedElement, selectedSection, setSelectedSection, setFormStyle, setDesignSettings, setThankYouPage]
     );
 
     // Apply multiple actions in sequence
@@ -505,6 +687,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         (actions: FormToolAction[]) => {
             let sections = [...currentSections];
             let deletedFieldIds: string[] = [];
+            let deletedSectionIds: string[] = [];
             let updatedFields: Map<string, { type?: string; extraAttributes?: Record<string, unknown> }> = new Map();
             let formReplaced = false;
 
@@ -514,14 +697,17 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                     sections = result;
                 }
 
-                // Track changes that affect selectedElement
+                // Track changes that affect selectedElement/selectedSection
                 if (action.type === "deleteFields") {
                     deletedFieldIds.push(...action.fieldIds);
                 } else if (action.type === "updateField") {
                     updatedFields.set(action.fieldId, action.updates);
                 } else if (action.type === "replaceForm") {
                     formReplaced = true;
+                } else if (action.type === "deleteSection") {
+                    deletedSectionIds.push(action.sectionId);
                 }
+                // Style/design actions are handled within applyFormAction and don't need tracking
             }
 
             setSections(sections);
@@ -530,9 +716,13 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
             if (formReplaced) {
                 // Form was replaced, clear selection
                 setSelectedElement(null);
+                setSelectedSection(null);
             } else if (selectedElement && deletedFieldIds.includes(selectedElement.id)) {
                 // Selected element was deleted
                 setSelectedElement(null);
+            } else if (selectedSection && deletedSectionIds.includes(selectedSection.id)) {
+                // Selected section was deleted
+                setSelectedSection(null);
             } else if (selectedElement && updatedFields.has(selectedElement.id)) {
                 // Selected element was updated - sync the changes
                 const updates = updatedFields.get(selectedElement.id)!;
@@ -551,7 +741,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 });
             }
         },
-        [currentSections, applyFormAction, setSections, selectedElement, setSelectedElement]
+        [currentSections, applyFormAction, setSections, selectedElement, setSelectedElement, selectedSection, setSelectedSection]
     );
 
     // Mark a message's actions as applied (persists to database)
