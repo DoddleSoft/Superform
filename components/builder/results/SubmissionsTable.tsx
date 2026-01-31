@@ -112,14 +112,14 @@ export function SubmissionsTable({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full w-full"
+            className="h-full w-full bg-base-100"
         >
             {/* Outer container handles vertical scroll */}
             <div className="h-full w-full overflow-y-auto">
                 {/* Inner container handles horizontal scroll */}
                 <div className="min-w-full overflow-x-auto">
-                    <table className="table table-zebra border-separate border-spacing-0" style={{ minWidth: 'max-content' }}>
-                        <thead className="sticky top-0 z-20 bg-base-200">
+                    <table className="table border-separate border-spacing-0" style={{ minWidth: 'max-content' }}>
+                        <thead className="sticky top-0 z-20">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <tr key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
@@ -131,8 +131,8 @@ export function SubmissionsTable({
                                     return (
                                         <th
                                             key={header.id}
-                                            className={`bg-base-200 border-b border-base-300 ${isSticky
-                                                ? "sticky left-0 z-30 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.1)]"
+                                            className={`bg-base-100 border-b-2 border-base-200 text-xs font-semibold text-base-content/60 uppercase tracking-wider py-3 px-4 ${isSticky
+                                                ? "sticky left-0 z-30 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                                                 : ""
                                                 }`}
                                             style={{
@@ -157,7 +157,7 @@ export function SubmissionsTable({
                         {table.getRowModel().rows.map((row) => (
                             <tr
                                 key={row.id}
-                                className="hover:bg-primary/5 cursor-pointer transition-colors group"
+                                className="hover:bg-base-50 cursor-pointer transition-colors group"
                                 onClick={() => onRowClick(row.original)}
                             >
                                 {row.getVisibleCells().map((cell) => {
@@ -168,8 +168,8 @@ export function SubmissionsTable({
                                     return (
                                         <td
                                             key={cell.id}
-                                            className={`border-b border-base-200 group-hover:bg-primary/5 transition-colors ${isSticky
-                                                ? "sticky left-0 z-10 bg-base-100 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.1)]"
+                                            className={`border-b border-base-100 py-3 px-4 text-sm group-hover:bg-base-50 transition-colors ${isSticky
+                                                ? "sticky left-0 z-10 bg-base-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                                                 : ""
                                                 }`}
                                             style={{
@@ -205,7 +205,7 @@ function StatusBadge({
 }) {
     if (isComplete) {
         return (
-            <span className="badge badge-success badge-sm gap-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-success/10 text-success text-xs font-medium rounded-full">
                 <LuCircleCheck className="w-3 h-3" />
                 Complete
             </span>
@@ -213,7 +213,7 @@ function StatusBadge({
     }
 
     return (
-        <span className="badge badge-warning badge-sm gap-1">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-warning/10 text-warning text-xs font-medium rounded-full">
             <LuClock className="w-3 h-3" />
             {progress}%
         </span>
@@ -226,7 +226,11 @@ function VersionBadge({ version }: { version?: number }) {
         return <span className="text-base-content/30 text-sm">—</span>;
     }
 
-    return <span className="badge badge-outline badge-sm">v{version}</span>;
+    return (
+        <span className="inline-flex items-center px-2 py-0.5 bg-base-200 text-base-content/70 text-xs font-medium rounded-md">
+            v{version}
+        </span>
+    );
 }
 
 // Cell Value Formatter
@@ -272,9 +276,9 @@ function TimeDisplay({ date }: { date: string }) {
     }
 
     return (
-        <div className="flex flex-col">
-            <span className="text-sm font-medium">{relative}</span>
-            <span className="text-xs text-base-content/50">
+        <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium text-base-content">{relative}</span>
+            <span className="text-xs text-base-content/40">
                 {d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
         </div>

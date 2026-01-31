@@ -14,6 +14,8 @@ import {
     LuClock,
     LuCircleCheck,
     LuInbox,
+    LuFileSpreadsheet,
+    LuSparkles,
 } from "react-icons/lu";
 import {
     VersionFilter,
@@ -186,7 +188,7 @@ export function ResultsView({ submissions }: { submissions: FormSubmission[] }) 
     }, [columns, filteredSubmissions, selectedVersions]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-base-100">
+        <div className="flex flex-col h-full w-full bg-base-200">
             {/* Toolbar */}
             <Toolbar
                 filterMode={filterMode}
@@ -243,8 +245,8 @@ function Toolbar({
     onVersionChange: (versions: number[]) => void;
 }) {
     return (
-        <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-base-200 bg-base-100">
-            <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-b border-base-200 bg-base-100">
+            <div className="flex items-center gap-3 flex-wrap">
                 {/* Version Filter */}
                 <VersionFilter
                     versions={availableVersions}
@@ -252,8 +254,8 @@ function Toolbar({
                     onVersionChange={onVersionChange}
                 />
 
-                {/* Filter Tabs */}
-                <div className="flex rounded-lg bg-base-200 p-1">
+                {/* Filter Tabs - Pill Style */}
+                <div className="inline-flex items-center bg-base-200/80 rounded-full p-1 gap-0.5">
                     <FilterButton
                         active={filterMode === "all"}
                         onClick={() => setFilterMode("all")}
@@ -273,7 +275,9 @@ function Toolbar({
                     />
                 </div>
 
-                <span className="text-sm text-base-content/60">
+                <div className="h-5 w-px bg-base-200 hidden sm:block" />
+
+                <span className="text-sm text-base-content/50 font-medium">
                     {totalCount} {totalCount === 1 ? "response" : "responses"}
                 </span>
             </div>
@@ -281,7 +285,11 @@ function Toolbar({
             <div className="flex items-center gap-2">
                 {/* Export Button */}
                 <button
-                    className="btn btn-sm btn-outline gap-2 hover:btn-primary"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        totalCount === 0
+                            ? "bg-base-200 text-base-content/30 cursor-not-allowed"
+                            : "bg-primary text-primary-content hover:bg-primary/90 shadow-sm"
+                    }`}
                     onClick={onExport}
                     disabled={totalCount === 0}
                 >
@@ -306,7 +314,11 @@ function FilterButton({
 }) {
     return (
         <button
-            className={`btn btn-sm ${active ? "btn-primary" : "btn-ghost"} gap-1.5`}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                active
+                    ? "bg-base-100 text-base-content shadow-sm"
+                    : "text-base-content/50 hover:text-base-content hover:bg-base-100/50"
+            }`}
             onClick={onClick}
         >
             {icon}
@@ -321,27 +333,40 @@ function EmptyState({ filterMode }: { filterMode: FilterMode }) {
         all: {
             title: "No responses yet",
             description: "Share your form to start collecting responses.",
+            icon: <LuInbox className="w-7 h-7" />,
         },
         complete: {
             title: "No complete responses",
             description:
                 "Complete responses will appear here when users submit the form.",
+            icon: <LuCircleCheck className="w-7 h-7" />,
         },
         partial: {
             title: "No partial responses",
             description: "Partial responses appear when users leave before submitting.",
+            icon: <LuClock className="w-7 h-7" />,
         },
     };
 
-    const { title, description } = messages[filterMode];
+    const { title, description, icon } = messages[filterMode];
 
     return (
-        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
-                <LuInbox className="w-10 h-10 text-base-content/30" />
+        <div className="flex flex-col items-center justify-center h-full p-8">
+            <div className="bg-base-100 rounded-2xl border border-base-200 shadow-sm p-8 text-center max-w-md">
+                <div className="w-14 h-14 bg-gradient-to-br from-base-200 to-base-300 rounded-2xl flex items-center justify-center mx-auto mb-5 text-base-content/40">
+                    {icon}
+                </div>
+                <h3 className="text-lg font-semibold text-base-content mb-2">{title}</h3>
+                <p className="text-sm text-base-content/60">{description}</p>
+                {filterMode === "all" && (
+                    <div className="mt-6 flex items-center justify-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                            <LuSparkles className="w-3.5 h-3.5" />
+                            Publish your form to start collecting
+                        </span>
+                    </div>
+                )}
             </div>
-            <h3 className="text-xl font-semibold mb-2">{title}</h3>
-            <p className="text-base-content/60 max-w-sm">{description}</p>
         </div>
     );
 }

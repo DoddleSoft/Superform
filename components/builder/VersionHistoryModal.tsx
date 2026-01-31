@@ -76,48 +76,51 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
                 onClick={onClose}
             >
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="bg-base-100 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-base-200">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
                                 <LuHistory className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold">Version History</h2>
-                                <p className="text-sm text-base-content/60">
+                                <h2 className="text-lg font-semibold text-base-content">Version History</h2>
+                                <p className="text-xs text-base-content/50">
                                     Published: v{currentVersion}
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="btn btn-ghost btn-sm btn-circle"
+                            className="p-2 rounded-lg text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors"
                         >
                             <LuX className="w-5 h-5" />
                         </button>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex-1 overflow-y-auto p-6">
                         {loading ? (
                             <div className="flex items-center justify-center py-12">
                                 <LuLoader className="w-6 h-6 animate-spin text-base-content/40" />
                             </div>
                         ) : versions.length === 0 ? (
-                            <div className="text-center py-12 text-base-content/60">
-                                <LuHistory className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                <p>No versions found</p>
-                                <p className="text-sm mt-1">
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <LuHistory className="w-8 h-8 text-primary" />
+                                </div>
+                                <p className="font-medium text-base-content">No versions found</p>
+                                <p className="text-sm text-base-content/50 mt-1">
                                     Versions are created each time you publish
                                 </p>
                             </div>
@@ -133,20 +136,20 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                                     return (
                                         <div
                                             key={version.id}
-                                            className={`p-4 rounded-lg border-2 transition-all ${
+                                            className={`p-4 rounded-xl border transition-all ${
                                                 isCurrent
-                                                    ? "border-primary bg-primary/5"
-                                                    : "border-base-200 hover:border-base-300"
+                                                    ? "border-primary/30 bg-primary/5"
+                                                    : "border-base-200 hover:border-base-300 hover:bg-base-200/30"
                                             }`}
                                         >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-bold">
+                                                        <span className="font-semibold text-base-content">
                                                             Version {version.version}
                                                         </span>
                                                         {isCurrent && (
-                                                            <span className="badge badge-primary badge-sm">
+                                                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
                                                                 Published
                                                             </span>
                                                         )}
@@ -167,7 +170,7 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                                                     <button
                                                         onClick={() => handleRestore(version)}
                                                         disabled={restoring}
-                                                        className="btn btn-ghost btn-sm gap-2"
+                                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"
                                                     >
                                                         {restoring ? (
                                                             <LuLoader className="w-4 h-4 animate-spin" />
@@ -193,7 +196,7 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-base-200 bg-base-50/50">
+                    <div className="px-6 py-4 border-t border-base-200 bg-base-200/30">
                         <p className="text-xs text-base-content/50 text-center">
                             Restore a previous version to load it into your draft. You&apos;ll need to republish to make it live.
                         </p>

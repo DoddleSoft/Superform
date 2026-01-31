@@ -79,33 +79,35 @@ export function VersionFilter({
 
     return (
         <details ref={dropdownRef} className="dropdown">
-            <summary className="btn btn-sm btn-ghost gap-2 bg-base-200 hover:bg-base-300">
-                <LuFilter className="w-4 h-4" />
+            <summary className="flex items-center gap-2 px-3 py-1.5 bg-base-200/80 hover:bg-base-200 rounded-full text-sm font-medium text-base-content/70 cursor-pointer transition-colors">
+                <LuFilter className="w-3.5 h-3.5" />
                 <span>{getDisplayText()}</span>
-                <LuChevronDown className="w-3.5 h-3.5" />
+                <LuChevronDown className="w-3 h-3 text-base-content/40" />
             </summary>
-            <ul className="dropdown-content z-50 menu mt-2 p-2 shadow-lg bg-base-100 rounded-xl border border-base-200 w-52">
+            <ul className="dropdown-content z-50 mt-2 p-1.5 shadow-lg bg-base-100 rounded-xl border border-base-200 w-48">
                 {/* All Versions Option */}
                 <li>
                     <button
-                        className={`flex items-center gap-3 ${isAllSelected ? "active" : ""}`}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isAllSelected ? "bg-primary/10 text-primary" : "hover:bg-base-200 text-base-content"
+                        }`}
                         onClick={handleSelectAll}
                     >
                         <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            className={`w-4 h-4 rounded flex items-center justify-center transition-colors ${
                                 isAllSelected
-                                    ? "bg-primary border-primary text-primary-content"
-                                    : "border-base-300"
+                                    ? "bg-primary text-primary-content"
+                                    : "border border-base-300"
                             }`}
                         >
-                            {isAllSelected && <LuCheck className="w-3 h-3" />}
+                            {isAllSelected && <LuCheck className="w-2.5 h-2.5" />}
                         </div>
-                        <span className="flex-1">All Versions</span>
-                        <span className="badge badge-sm badge-ghost">{versions.length}</span>
+                        <span className="flex-1 text-left">All Versions</span>
+                        <span className="text-xs text-base-content/40 bg-base-200 px-1.5 py-0.5 rounded">{versions.length}</span>
                     </button>
                 </li>
 
-                <li className="divider my-1"></li>
+                <li className="my-1 border-t border-base-200"></li>
 
                 {/* Individual Versions */}
                 {sortedVersions.map((version) => {
@@ -113,19 +115,21 @@ export function VersionFilter({
                     return (
                         <li key={version}>
                             <button
-                                className={`flex items-center gap-3 ${isSelected ? "active" : ""}`}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                                    isSelected ? "bg-primary/10 text-primary" : "hover:bg-base-200 text-base-content"
+                                }`}
                                 onClick={() => handleToggleVersion(version)}
                             >
                                 <div
-                                    className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                    className={`w-4 h-4 rounded flex items-center justify-center transition-colors ${
                                         isSelected
-                                            ? "bg-primary border-primary text-primary-content"
-                                            : "border-base-300"
+                                            ? "bg-primary text-primary-content"
+                                            : "border border-base-300"
                                     }`}
                                 >
-                                    {isSelected && <LuCheck className="w-3 h-3" />}
+                                    {isSelected && <LuCheck className="w-2.5 h-2.5" />}
                                 </div>
-                                <span className="flex-1">Version {version}</span>
+                                <span className="flex-1 text-left">Version {version}</span>
                             </button>
                         </li>
                     );

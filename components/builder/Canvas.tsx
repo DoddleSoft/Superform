@@ -7,7 +7,19 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FormElements } from "./FormElements";
-import { LuPlus, LuTrash2, LuSmartphone, LuTablet, LuMonitor, LuChevronRight, LuCheck } from "react-icons/lu";
+import { 
+    LuPlus, 
+    LuTrash2, 
+    LuSmartphone, 
+    LuTablet, 
+    LuMonitor, 
+    LuChevronRight, 
+    LuCheck, 
+    LuZap,
+    LuLayers,
+    LuGripVertical,
+    LuSparkles
+} from "react-icons/lu";
 import { motion, AnimatePresence, elementVariants } from "@/lib/animations";
 import { ClassicRenderer } from "@/components/renderers/ClassicRenderer";
 import { TypeformRenderer } from "@/components/renderers/TypeformRenderer";
@@ -77,18 +89,19 @@ export function Canvas() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-            {/* Canvas Tabs */}
-            <div className="bg-base-100 border-b border-base-200 px-4 py-2 flex items-center justify-center shrink-0 relative">
-                <div className="inline-flex bg-base-200 rounded-lg p-1 gap-1">
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-base-200">
+            {/* Canvas Header */}
+            <div className="bg-base-100 border-b border-base-200 px-4 py-3 flex items-center justify-center shrink-0 relative">
+                {/* Canvas Tabs - Pill Style (always centered) */}
+                <div className="inline-flex bg-base-200/80 rounded-full p-1 gap-0.5">
                     {CANVAS_TABS.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setCanvasTab(tab.id)}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all
+                            className={`px-5 py-1.5 text-sm font-medium rounded-full transition-all duration-200
                                 ${canvasTab === tab.id
                                     ? 'bg-base-100 text-base-content shadow-sm'
-                                    : 'text-base-content/60 hover:text-base-content hover:bg-base-100/50'
+                                    : 'text-base-content/50 hover:text-base-content hover:bg-base-100/50'
                                 }`}
                         >
                             {tab.label}
@@ -96,23 +109,25 @@ export function Canvas() {
                     ))}
                 </div>
 
-                {/* Device Switcher - Only for Design Tab */}
+                {/* Device Switcher - Absolute positioned on right, only for Design Tab */}
                 {canvasTab === 'design' && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center bg-base-200 rounded-lg p-1 gap-1">
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center bg-base-200/80 rounded-full p-1 gap-0.5">
                         {DEVICE_SIZES.map((device) => {
                             const Icon = device.icon;
+                            const isActive = previewDevice === device.id;
                             return (
                                 <button
                                     key={device.id}
                                     onClick={() => setPreviewDevice(device.id)}
-                                    className={`btn btn-sm btn-ghost h-8 min-h-0 px-2 gap-2 ${previewDevice === device.id
-                                        ? 'bg-white shadow-sm text-base-content'
-                                        : 'text-base-content/60 hover:bg-base-100/50'
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200
+                                        ${isActive
+                                            ? 'bg-base-100 text-base-content shadow-sm'
+                                            : 'text-base-content/50 hover:text-base-content hover:bg-base-100/50'
                                         }`}
                                     title={device.label}
                                 >
-                                    <Icon className="w-4 h-4" />
-                                    <span className="hidden lg:inline text-xs">{device.label}</span>
+                                    <Icon className="w-3.5 h-3.5" />
+                                    <span className="hidden lg:inline">{device.label}</span>
                                 </button>
                             );
                         })}
@@ -123,12 +138,12 @@ export function Canvas() {
             {/* Canvas Content */}
             <div
                 ref={containerRef}
-                className={`flex-1 bg-base-200 overflow-y-auto overflow-x-hidden flex justify-center relative px-8 pt-8 transition-all
+                className={`flex-1 overflow-y-auto overflow-x-hidden flex justify-center relative px-6 py-6 transition-all
                     ${isDragging ? 'cursor-grabbing select-none' : 'cursor-default'}
                 `}
                 style={{
-                    backgroundImage: "radial-gradient(#000000 1px, transparent 1px)",
-                    backgroundSize: "20px 20px",
+                    backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)",
+                    backgroundSize: "24px 24px",
                 }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -174,17 +189,19 @@ export function Canvas() {
 
                 {/* Logic Tab Content - Placeholder for future conditional logic */}
                 {canvasTab === 'logic' && (
-                    <div className="w-full max-w-3xl flex flex-col items-center justify-center py-16 z-10">
-                        <div className="text-center text-base-content/50">
-                            <div className="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                                </svg>
+                    <div className="w-full max-w-xl flex flex-col items-center justify-center py-20 z-10">
+                        <div className="bg-base-100 rounded-2xl border border-base-200 shadow-sm p-8 text-center">
+                            <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                                <LuZap className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-lg font-medium mb-2">Conditional Logic</h3>
-                            <p className="text-sm max-w-sm">
-                                Coming soon! Add conditional rules to show or hide questions based on user responses.
+                            <h3 className="text-lg font-semibold text-base-content mb-2">Conditional Logic</h3>
+                            <p className="text-sm text-base-content/60 max-w-sm mb-6">
+                                Add conditional rules to show or hide questions based on user responses.
                             </p>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                                <LuSparkles className="w-3.5 h-3.5" />
+                                Coming Soon
+                            </span>
                         </div>
                     </div>
                 )}
@@ -266,44 +283,52 @@ function SectionCard({
             {/* Section Card */}
             <div
                 ref={setNodeRef}
-                className={`relative rounded-xl border-2 bg-base-100 shadow-sm transition-all overflow-hidden
-                    ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-base-300'}
-                    ${isOver ? 'ring-2 ring-primary' : ''}
+                className={`relative rounded-2xl border bg-base-100 shadow-sm transition-all duration-200 overflow-hidden
+                    ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/10' : 'border-base-200 hover:border-base-300'}
+                    ${isOver ? 'ring-2 ring-primary/30 border-primary/50' : ''}
                 `}
                 onClick={handleSectionClick}
             >
                 {/* Section Header */}
-                <div className={`px-4 py-3 border-b flex items-center gap-3 bg-base-50/50 ${isSelected ? 'border-primary/30' : 'border-base-200'}`}>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-xs font-bold text-base-content/50 uppercase tracking-wider shrink-0">
-                            Section {index + 1}
-                        </span>
-                        <span className="text-sm font-medium truncate">
-                            {section.title}
-                        </span>
+                <div className={`px-4 py-3 border-b flex items-center gap-3 transition-colors ${isSelected ? 'bg-primary/5 border-primary/20' : 'bg-base-50/50 border-base-100'}`}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold transition-colors
+                            ${isSelected ? 'bg-primary text-primary-content' : 'bg-base-200 text-base-content/60'}`}>
+                            {index + 1}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate text-base-content">
+                                {section.title || 'Untitled Section'}
+                            </span>
+                            <span className="text-xs text-base-content/50">
+                                {section.elements.length} {section.elements.length === 1 ? 'field' : 'fields'}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Section Actions */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         {sections.length > 1 && (
                             <button
-                                className="btn btn-ghost btn-xs btn-square text-error/70 hover:text-error hover:bg-error/10"
+                                className="p-1.5 rounded-lg text-base-content/40 hover:text-error hover:bg-error/10 transition-colors"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     removeSection(section.id);
                                 }}
                             >
-                                <LuTrash2 className="w-3.5 h-3.5" />
+                                <LuTrash2 className="w-4 h-4" />
                             </button>
                         )}
                     </div>
                 </div>
 
                 {/* Section Content - Elements */}
-                <div className="p-4 min-h-[120px]">
+                <div className="p-4 min-h-[100px]">
                     {section.elements.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center text-base-content/30 border-2 border-dashed border-base-200 rounded-lg p-6 hover:border-primary/50 transition-colors">
-                            <p className="text-sm">Drag and drop elements here</p>
+                        <div className="flex flex-col items-center justify-center text-base-content/40 border-2 border-dashed border-base-200 rounded-xl p-8 hover:border-primary/40 hover:bg-primary/5 transition-all group">
+                            <LuLayers className="w-6 h-6 mb-2 opacity-40 group-hover:opacity-60 transition-opacity" />
+                            <p className="text-sm font-medium">Drop fields here</p>
+                            <p className="text-xs text-base-content/30 mt-1">Drag elements from the sidebar</p>
                         </div>
                     ) : (
                         <SortableContext
@@ -399,10 +424,10 @@ function SortableElement({ element, sectionId }: { element: FormElementInstance;
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`p-4 rounded-lg border transition-all relative group bg-base-100
+            className={`relative group bg-base-100 rounded-xl border transition-all duration-200
                 ${isSelected
-                    ? "border-primary shadow-md ring-1 ring-primary"
-                    : "border-base-200 hover:border-primary/50"
+                    ? "border-primary shadow-md ring-2 ring-primary/10"
+                    : "border-base-200 hover:border-base-300 hover:shadow-sm"
                 }
             `}
             onClick={(e) => {
@@ -411,23 +436,33 @@ function SortableElement({ element, sectionId }: { element: FormElementInstance;
                 setSelectedSection(null);
             }}
         >
-            {/* Overlay to prevent interaction with form fields during design */}
-            <div className="absolute inset-0 w-full h-full z-10" />
+            {/* Drag handle indicator */}
+            <div className={`absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab
+                ${isSelected ? 'opacity-100' : ''}`}>
+                <LuGripVertical className="w-4 h-4 text-base-content/30" />
+            </div>
 
+            {/* Content with left padding for drag handle */}
+            <div className="pl-8 pr-4 py-4">
+                {/* Overlay to prevent interaction with form fields during design */}
+                <div className="absolute inset-0 w-full h-full z-10" />
+                <DesignerComponent element={element} />
+            </div>
+
+            {/* Selection indicator */}
             <AnimatePresence>
                 {isSelected && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: -5 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: -5 }}
-                        className="absolute -top-2 -right-2 bg-primary text-primary-content text-xs px-2 py-0.5 rounded badge badge-primary shadow-sm z-20"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="absolute -top-2 -right-2 flex items-center gap-1 bg-primary text-primary-content text-xs font-medium px-2 py-1 rounded-lg shadow-sm z-20"
                     >
+                        <LuCheck className="w-3 h-3" />
                         Selected
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <DesignerComponent element={element} />
         </motion.div>
     );
 }
@@ -452,13 +487,13 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
 
     if (sections.length === 0) {
         return (
-            <div className="w-full flex flex-col items-center justify-center py-16 z-10">
-                <div className="text-center text-base-content/50">
-                    <div className="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <LuMonitor className="w-8 h-8 opacity-50" />
+            <div className="w-full flex flex-col items-center justify-center py-20 z-10">
+                <div className="bg-base-100 rounded-2xl border border-base-200 shadow-sm p-8 text-center">
+                    <div className="w-14 h-14 bg-gradient-to-br from-base-200 to-base-300 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                        <LuMonitor className="w-7 h-7 text-base-content/40" />
                     </div>
-                    <h3 className="text-lg font-medium mb-2">No Form Content</h3>
-                    <p className="text-sm max-w-sm">
+                    <h3 className="text-lg font-semibold text-base-content mb-2">No Form Content</h3>
+                    <p className="text-sm text-base-content/60 max-w-sm">
                         Add some fields to your form to see a preview here.
                     </p>
                 </div>
@@ -468,12 +503,10 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
 
     return (
         <div className="w-full flex flex-col items-center z-10 pb-8">
-
-
             {/* Device Frame */}
             <motion.div
                 layout
-                className="bg-base-100 rounded-2xl shadow-2xl overflow-hidden border-4 border-base-300"
+                className="bg-base-100 rounded-2xl shadow-xl overflow-hidden border border-base-200"
                 style={{
                     width: Math.min(deviceConfig.width, typeof window !== 'undefined' ? window.innerWidth - 100 : deviceConfig.width),
                     maxWidth: '100%',
@@ -481,13 +514,13 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
                 transition={{ duration: 0.3, ease: "easeInOut" }}
             >
                 {/* Browser Chrome */}
-                <div className="bg-base-200 px-4 py-2 flex items-center gap-2 border-b border-base-300">
+                <div className="bg-base-100 px-4 py-2.5 flex items-center gap-3 border-b border-base-200">
                     <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-error/60" />
-                        <div className="w-3 h-3 rounded-full bg-warning/60" />
-                        <div className="w-3 h-3 rounded-full bg-success/60" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-error/50" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-warning/50" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-success/50" />
                     </div>
-                    <div className="flex-1 bg-base-300 rounded-md px-3 py-1 text-xs text-base-content/50 truncate">
+                    <div className="flex-1 bg-base-200 rounded-full px-4 py-1.5 text-xs text-base-content/40 truncate text-center">
                         yourdomain.com/form
                     </div>
                 </div>
@@ -531,9 +564,10 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
             </motion.div>
 
             {/* Style indicator */}
-            <div className="mt-4 text-xs text-base-content/50 flex items-center gap-2">
-                <span className="badge badge-ghost badge-sm">
-                    {formStyle === 'classic' ? 'Classic' : 'Typeform'} style
+            <div className="mt-5 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-base-100 border border-base-200 text-base-content/60 text-xs font-medium rounded-full shadow-sm">
+                    <LuSparkles className="w-3 h-3" />
+                    {formStyle === 'classic' ? 'Classic' : 'Typeform'} Style
                 </span>
             </div>
         </div>

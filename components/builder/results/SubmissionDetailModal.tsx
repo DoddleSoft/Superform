@@ -44,25 +44,25 @@ export function SubmissionDetailModal({
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Modal Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-base-200 shrink-0">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-base-200 shrink-0">
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h2 className="text-xl font-bold">Response Details</h2>
+                            <div className="flex items-center gap-2.5">
+                                <h2 className="text-lg font-semibold text-base-content">Response Details</h2>
                                 <VersionBadge version={submission.form_version} />
                             </div>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-base-content/60">
-                                <span className="flex items-center gap-1.5">
-                                    <LuCalendar className="w-4 h-4" />
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-base-content/50">
+                                <span className="flex items-center gap-1">
+                                    <LuCalendar className="w-3.5 h-3.5" />
                                     {new Date(submission.created_at).toLocaleDateString()}
                                 </span>
-                                <span className="flex items-center gap-1.5">
-                                    <LuHash className="w-4 h-4" />
+                                <span className="flex items-center gap-1">
+                                    <LuHash className="w-3.5 h-3.5" />
                                     {submission.id.slice(0, 8)}
                                 </span>
                             </div>
                         </div>
                         <button
-                            className="btn btn-ghost btn-sm btn-circle shrink-0"
+                            className="p-2 rounded-lg text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors"
                             onClick={onClose}
                         >
                             <LuX className="w-5 h-5" />
@@ -70,7 +70,7 @@ export function SubmissionDetailModal({
                     </div>
 
                     {/* Progress Overview */}
-                    <div className="px-6 py-4 bg-gradient-to-r from-base-200/50 to-transparent border-b border-base-200 shrink-0">
+                    <div className="px-6 py-4 bg-base-50 border-b border-base-200 shrink-0">
                         <div className="flex items-center gap-4">
                             <StatusBadge
                                 isComplete={submission.is_complete}
@@ -78,14 +78,14 @@ export function SubmissionDetailModal({
                             />
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-sm text-base-content/60">
+                                    <span className="text-xs text-base-content/50">
                                         {submission.answeredFields} of {submission.totalFields} fields answered
                                     </span>
-                                    <span className="text-sm font-semibold">
+                                    <span className="text-xs font-semibold text-base-content/70">
                                         {submission.progress}%
                                     </span>
                                 </div>
-                                <div className="h-2 bg-base-300 rounded-full overflow-hidden">
+                                <div className="h-1.5 bg-base-200 rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${submission.progress}%` }}
@@ -163,8 +163,11 @@ export function SubmissionDetailModal({
                     </div>
 
                     {/* Modal Footer */}
-                    <div className="flex items-center justify-end gap-3 p-6 border-t border-base-200 shrink-0">
-                        <button className="btn btn-ghost" onClick={onClose}>
+                    <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-base-200 shrink-0">
+                        <button 
+                            className="px-4 py-2 rounded-lg text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"
+                            onClick={onClose}
+                        >
                             Close
                         </button>
                     </div>

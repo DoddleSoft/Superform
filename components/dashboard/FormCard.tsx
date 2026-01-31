@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { FiMoreHorizontal, FiEdit2, FiCopy, FiTrash2, FiExternalLink } from "react-icons/fi";
+import { LuEllipsis, LuPencil, LuCopy, LuTrash2, LuExternalLink, LuSquarePen } from "react-icons/lu";
 import type { FormWithStats } from "@/types/form-builder";
 
 interface FormCardProps {
@@ -48,10 +48,10 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
         >
             <Link href={`/builder/${form.id}`} className="block">
                 <div
-                    className={`relative overflow-hidden rounded-xl aspect-[4/3] transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.02] ${
+                    className={`relative overflow-hidden rounded-2xl aspect-[4/3] transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.02] ${
                         hasGradient
                             ? `bg-gradient-to-br ${gradient}`
-                            : "bg-base-200 border border-base-300"
+                            : "bg-base-100 border border-base-200"
                     }`}
                 >
                     {/* Decorative wave shape for gradient cards */}
@@ -64,14 +64,14 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                             >
                                 <path
                                     d="M0,40 C100,80 200,20 300,60 C350,80 400,50 400,50 L400,100 L0,100 Z"
-                                    fill="rgba(0,0,0,0.15)"
+                                    fill="rgba(0,0,0,0.12)"
                                 />
                             </svg>
                         </div>
                     )}
 
                     {/* Title centered in card */}
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 flex items-center justify-center p-6">
                         <h3
                             className={`text-lg font-semibold text-center line-clamp-3 ${
                                 hasGradient ? "text-white drop-shadow-sm" : "text-base-content"
@@ -84,7 +84,7 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                     {/* Draft badge for unpublished forms */}
                     {!form.published && (
                         <div className="absolute top-3 left-3">
-                            <span className="badge badge-ghost badge-sm bg-base-100/80 backdrop-blur-sm">
+                            <span className="inline-flex items-center px-2.5 py-1 bg-base-100/90 backdrop-blur-sm text-base-content/70 text-xs font-medium rounded-lg">
                                 Draft
                             </span>
                         </div>
@@ -93,8 +93,8 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
             </Link>
 
             {/* Bottom bar with response count and menu */}
-            <div className="flex items-center justify-between mt-2 px-1">
-                <span className="text-sm text-base-content/60">
+            <div className="flex items-center justify-between mt-2.5 px-1">
+                <span className="text-xs text-base-content/50 font-medium">
                     {form.submission_count === 0
                         ? "No responses"
                         : form.submission_count === 1
@@ -106,18 +106,21 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                 <div className="dropdown dropdown-end">
                     <label
                         tabIndex={0}
-                        className="btn btn-ghost btn-xs btn-square opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="p-1.5 rounded-lg text-base-content/40 hover:text-base-content hover:bg-base-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                         onClick={(e) => e.preventDefault()}
                     >
-                        <FiMoreHorizontal className="w-4 h-4" />
+                        <LuEllipsis className="w-4 h-4" />
                     </label>
                     <ul
                         tabIndex={0}
-                        className="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-48 z-10 border border-base-200"
+                        className="dropdown-content mt-2 p-1.5 shadow-lg bg-base-100 rounded-xl w-48 z-10 border border-base-200"
                     >
                         <li>
-                            <Link href={`/builder/${form.id}`}>
-                                <FiEdit2 className="w-4 h-4" />
+                            <Link 
+                                href={`/builder/${form.id}`}
+                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
+                            >
+                                <LuSquarePen className="w-4 h-4" />
                                 Open in Builder
                             </Link>
                         </li>
@@ -126,31 +129,38 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                                 <Link
                                     href={`/submit/${form.share_url}`}
                                     target="_blank"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
                                 >
-                                    <FiExternalLink className="w-4 h-4" />
+                                    <LuExternalLink className="w-4 h-4" />
                                     View Live Form
                                 </Link>
                             </li>
                         )}
                         <li>
-                            <button onClick={() => onEdit(form)}>
-                                <FiEdit2 className="w-4 h-4" />
+                            <button 
+                                onClick={() => onEdit(form)}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
+                            >
+                                <LuPencil className="w-4 h-4" />
                                 Edit Details
                             </button>
                         </li>
                         <li>
-                            <button onClick={() => onDuplicate(form)}>
-                                <FiCopy className="w-4 h-4" />
+                            <button 
+                                onClick={() => onDuplicate(form)}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
+                            >
+                                <LuCopy className="w-4 h-4" />
                                 Duplicate
                             </button>
                         </li>
-                        <div className="divider my-1"></div>
+                        <li className="my-1 border-t border-base-200"></li>
                         <li>
                             <button
                                 onClick={() => onDelete(form)}
-                                className="text-error hover:bg-error hover:text-error-content"
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-error hover:bg-error/10 transition-colors"
                             >
-                                <FiTrash2 className="w-4 h-4" />
+                                <LuTrash2 className="w-4 h-4" />
                                 Delete
                             </button>
                         </li>

@@ -6,6 +6,8 @@ import { useToast } from "@/context/ToastContext";
 import { useUser } from "@clerk/nextjs";
 import { createForm } from "@/actions/form";
 import { useRouter } from "next/navigation";
+import { LuX, LuLoader, LuFileText, LuPlus } from "react-icons/lu";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function CreateFormModal({ onClose }: { onClose: () => void }) {
     const { currentWorkspace } = useWorkspace();
@@ -43,85 +45,110 @@ export function CreateFormModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <dialog className="modal modal-open">
-            <div className="modal-box max-w-lg">
-                <form method="dialog">
-                    <button 
-                        onClick={onClose} 
-                        className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4"
-                        disabled={isSubmitting}
-                    >
-                        ✕
-                    </button>
-                </form>
-                
-                <h3 className="text-2xl font-bold mb-1">Create New Form</h3>
-                <p className="text-sm text-base-content/60 mb-6">
-                    In <span className="font-semibold">{currentWorkspace?.name}</span>
-                </p>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-5">
-                        <div className="form-control w-full">
-                            <label className="label pb-1">
-                                <span className="label-text font-medium">Form Name</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Enter form name"
-                                className="input input-ghost w-full focus:bg-base-200"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                disabled={isSubmitting}
-                                autoFocus
-                                required
-                            />
-                        </div>
-
-                        <div className="form-control w-full">
-                            <div className="flex items-baseline justify-between mb-1">
-                                <span className="label-text font-medium">Description</span>
-                                <span className="text-xs text-base-content/50">Optional</span>
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={onClose}
+            >
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                                <LuPlus className="w-5 h-5 text-primary" />
                             </div>
-                            <textarea
-                                className="textarea textarea-ghost min-h-[100px] focus:bg-base-200 resize-none w-full"
-                                placeholder="Add a brief description..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                disabled={isSubmitting}
-                            ></textarea>
+                            <div>
+                                <h2 className="text-lg font-semibold text-base-content">Create New Form</h2>
+                                <p className="text-xs text-base-content/50">
+                                    In <span className="font-medium">{currentWorkspace?.name}</span>
+                                </p>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="modal-action">
                         <button
-                            type="button"
-                            className="btn"
                             onClick={onClose}
                             disabled={isSubmitting}
+                            className="p-2 rounded-lg text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors"
                         >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={isSubmitting || !name.trim()}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                    Creating
-                                </>
-                            ) : (
-                                "Create Form"
-                            )}
+                            <LuX className="w-5 h-5" />
                         </button>
                     </div>
-                </form>
-            </div>
-            <form method="dialog" className="modal-backdrop">
-                <button onClick={onClose}>close</button>
-            </form>
-        </dialog>
+
+                    {/* Body */}
+                    <form onSubmit={handleSubmit} className="p-6">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-base-content mb-1.5">
+                                    Form Name
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter form name"
+                                    className="w-full px-4 py-2.5 bg-base-200/60 border-0 rounded-xl text-sm placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    disabled={isSubmitting}
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <div className="flex items-baseline justify-between mb-1.5">
+                                    <label className="text-sm font-medium text-base-content">Description</label>
+                                    <span className="text-xs text-base-content/40">Optional</span>
+                                </div>
+                                <textarea
+                                    className="w-full px-4 py-2.5 bg-base-200/60 border-0 rounded-xl text-sm placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none min-h-[100px]"
+                                    placeholder="Add a brief description..."
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-base-200">
+                            <button
+                                type="button"
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"
+                                onClick={onClose}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                                    isSubmitting || !name.trim()
+                                        ? "bg-base-200 text-base-content/30 cursor-not-allowed"
+                                        : "bg-primary text-primary-content hover:bg-primary/90 shadow-sm"
+                                }`}
+                                disabled={isSubmitting || !name.trim()}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <LuLoader className="w-4 h-4 animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    "Create Form"
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

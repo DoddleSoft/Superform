@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { updateWorkspace, deleteWorkspace } from "@/actions/workspace";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useToast } from "@/context/ToastContext";
-import { FiSettings, FiTrash2 } from "react-icons/fi";
+import { LuSettings, LuTrash2, LuX, LuLoader, LuInfo, LuTriangleAlert } from "react-icons/lu";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface WorkspaceSettingsModalProps {
     onClose: () => void;
@@ -78,39 +79,53 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
     };
 
     return (
-        <dialog className="modal modal-open">
-            <div className="modal-box max-w-lg">
-                <form method="dialog">
-                    <button 
-                        onClick={onClose} 
-                        className="btn btn-sm btn-circle btn-ghost absolute right-4 top-4"
-                        disabled={isSubmitting || isDeleting}
-                    >
-                        ✕
-                    </button>
-                </form>
-                
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                        <FiSettings className="w-5 h-5 text-primary" />
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={onClose}
+            >
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-base-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
+                                <LuSettings className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-base-content">Workspace Settings</h2>
+                                <p className="text-xs text-base-content/50">Manage your workspace</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            disabled={isSubmitting || isDeleting}
+                            className="p-2 rounded-lg text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors"
+                        >
+                            <LuX className="w-5 h-5" />
+                        </button>
                     </div>
-                    <div>
-                        <h3 className="text-2xl font-bold">Workspace Settings</h3>
-                        <p className="text-sm text-base-content/60">Manage your workspace</p>
-                    </div>
-                </div>
 
                 {!showDeleteConfirm ? (
-                    <>
+                    <div className="p-6">
                         <form onSubmit={handleSave}>
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text font-medium">Workspace Name</span>
+                            <div>
+                                <label className="block text-sm font-medium text-base-content mb-1.5">
+                                    Workspace Name
                                 </label>
                                 <input
                                     type="text"
                                     placeholder="Enter workspace name"
-                                    className="input input-ghost w-full focus:bg-base-200"
+                                    className="w-full px-4 py-2.5 bg-base-200/60 border-0 rounded-xl text-sm placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     disabled={isSubmitting}
@@ -120,18 +135,16 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                             </div>
 
                             {isDefault && (
-                                <div className="alert alert-info mt-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span className="text-sm">This is your default workspace</span>
+                                <div className="flex items-center gap-3 mt-4 p-3 bg-info/10 rounded-xl">
+                                    <LuInfo className="w-5 h-5 text-info flex-shrink-0" />
+                                    <span className="text-sm text-info">This is your default workspace</span>
                                 </div>
                             )}
 
-                            <div className="modal-action">
+                            <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-base-200">
                                 <button
                                     type="button"
-                                    className="btn"
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"
                                     onClick={onClose}
                                     disabled={isSubmitting}
                                 >
@@ -139,13 +152,17 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                                 </button>
                                 <button
                                     type="submit"
-                                    className="btn btn-primary"
+                                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                                        isSubmitting || !name.trim() || name === currentWorkspace.name
+                                            ? "bg-base-200 text-base-content/30 cursor-not-allowed"
+                                            : "bg-primary text-primary-content hover:bg-primary/90 shadow-sm"
+                                    }`}
                                     disabled={isSubmitting || !name.trim() || name === currentWorkspace.name}
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <span className="loading loading-spinner loading-sm"></span>
-                                            Saving
+                                            <LuLoader className="w-4 h-4 animate-spin" />
+                                            Saving...
                                         </>
                                     ) : (
                                         "Save Changes"
@@ -156,10 +173,10 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
 
                         {/* Danger Zone */}
                         {canDelete && (
-                            <div className="mt-8 pt-6 border-t border-error/20">
+                            <div className="mt-6 pt-6 border-t border-error/20 rounded-xl bg-error/5 -mx-6 -mb-6 px-6 pb-6">
                                 <div className="flex items-start gap-3 mb-4">
-                                    <div className="p-2 rounded-lg bg-error/10">
-                                        <FiTrash2 className="w-5 h-5 text-error" />
+                                    <div className="w-10 h-10 bg-error/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <LuTrash2 className="w-5 h-5 text-error" />
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-error mb-1">Danger Zone</h4>
@@ -170,37 +187,35 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                                 </div>
                                 <button
                                     type="button"
-                                    className="btn btn-error btn-sm"
+                                    className="flex items-center gap-2 px-4 py-2 bg-error/10 text-error rounded-xl text-sm font-medium hover:bg-error/20 transition-colors"
                                     onClick={() => setShowDeleteConfirm(true)}
                                 >
-                                    <FiTrash2 className="w-4 h-4" />
+                                    <LuTrash2 className="w-4 h-4" />
                                     Delete Workspace
                                 </button>
                             </div>
                         )}
-                    </>
+                    </div>
                 ) : (
-                    <form>
-                        <div className="alert alert-error">
-                            <FiTrash2 className="w-6 h-6" />
+                    <div className="p-6">
+                        <div className="flex items-start gap-4 p-4 bg-error/10 rounded-xl mb-4">
+                            <LuTriangleAlert className="w-6 h-6 text-error flex-shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="font-bold">Delete Workspace?</h4>
-                                <p className="text-sm">
+                                <h4 className="font-semibold text-error">Delete Workspace?</h4>
+                                <p className="text-sm text-base-content/70 mt-1">
                                     This action cannot be undone. All forms and submissions will be permanently deleted.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="form-control mt-4">
-                            <label className="label">
-                                <span className="label-text font-medium">
-                                    Type <strong className="text-error">{currentWorkspace.name}</strong> to confirm
-                                </span>
+                        <div>
+                            <label className="block text-sm font-medium text-base-content mb-1.5">
+                                Type <span className="text-error font-semibold">{currentWorkspace.name}</span> to confirm
                             </label>
                             <input
                                 type="text"
                                 placeholder={currentWorkspace.name}
-                                className="input input-bordered input-error w-full"
+                                className="w-full px-4 py-2.5 bg-base-200/60 border-0 rounded-xl text-sm placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-error/20"
                                 value={deleteConfirmText}
                                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                                 disabled={isDeleting}
@@ -208,10 +223,10 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                             />
                         </div>
 
-                        <div className="modal-action">
+                        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-base-200">
                             <button
                                 type="button"
-                                className="btn"
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"
                                 onClick={() => {
                                     setShowDeleteConfirm(false);
                                     setDeleteConfirmText("");
@@ -222,29 +237,31 @@ export function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps)
                             </button>
                             <button
                                 type="button"
-                                className="btn btn-error"
+                                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                                    isDeleting || deleteConfirmText !== currentWorkspace.name
+                                        ? "bg-base-200 text-base-content/30 cursor-not-allowed"
+                                        : "bg-error text-error-content hover:bg-error/90 shadow-sm"
+                                }`}
                                 onClick={handleDelete}
                                 disabled={isDeleting || deleteConfirmText !== currentWorkspace.name}
                             >
                                 {isDeleting ? (
                                     <>
-                                        <span className="loading loading-spinner loading-sm"></span>
-                                        Deleting
+                                        <LuLoader className="w-4 h-4 animate-spin" />
+                                        Deleting...
                                     </>
                                 ) : (
                                     <>
-                                        <FiTrash2 className="w-4 h-4" />
+                                        <LuTrash2 className="w-4 h-4" />
                                         Delete Workspace
                                     </>
                                 )}
                             </button>
                         </div>
-                    </form>
+                    </div>
                 )}
-            </div>
-            <form method="dialog" className="modal-backdrop">
-                <button onClick={onClose}>close</button>
-            </form>
-        </dialog>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
     );
 }
