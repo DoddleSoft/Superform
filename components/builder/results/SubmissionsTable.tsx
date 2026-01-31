@@ -14,6 +14,9 @@ import {
     LuX,
     LuArchive,
     LuCircleCheck,
+    LuFileText,
+    LuImage,
+    LuDownload,
 } from "react-icons/lu";
 import { FormElementType } from "@/types/form-builder";
 import { SubmissionWithProgress } from "@/types/submission";
@@ -248,9 +251,71 @@ function CellValue({ value, type }: { value: any; type: FormElementType }) {
             );
         case FormElementType.DATE:
             return <span>{new Date(value).toLocaleDateString()}</span>;
+        case FormElementType.FILE_UPLOAD:
+            return <FileUploadCellValue value={value} />;
         default:
             return <span className="text-sm">{String(value)}</span>;
     }
+}
+
+// File Upload Cell Value Component
+interface UploadedFileInfo {
+    url: string;
+    name: string;
+    size: number;
+    type: string;
+}
+
+function FileUploadCellValue({ value }: { value: any }) {
+    let files: UploadedFileInfo[] = [];
+    
+    try {
+        if (typeof value === "string") {
+            files = JSON.parse(value);
+        } else if (Array.isArray(value)) {
+            files = value;
+        }
+    } catch {
+        return <span className="text-base-content/30">Invalid file data</span>;
+    }
+
+    if (!files || files.length === 0) {
+        return <span className="text-base-content/30">—</span>;
+    }
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const getFileIcon = (fileType: string) => {
+        if (fileType.startsWith("image/")) return <LuImage className="w-3.5 h-3.5" />;
+        return <LuFileText className="w-3.5 h-3.5" />;
+    };
+
+    if (files.length === 1) {
+        const file = files[0];
+        return (
+            <a
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-primary hover:text-primary-focus transition-colors"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {getFileIcon(file.type)}
+                <span className="text-sm truncate max-w-[120px]">{file.name}</span>
+                <LuDownload className="w-3 h-3 opacity-60" />
+            </a>
+        );
+    }
+
+    return (
+        <span className="text-sm text-primary">
+            {files.length} files
+        </span>
+    );
 }
 
 // Time Display Component

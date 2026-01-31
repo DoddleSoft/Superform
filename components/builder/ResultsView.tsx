@@ -47,6 +47,7 @@ function extractColumnsFromSections(sections: FormSection[]): Column[] {
             case FormElementType.CHECKBOX_GROUP:
             case FormElementType.RATING:
             case FormElementType.YES_NO:
+            case FormElementType.FILE_UPLOAD:
                 cols.push({
                     id: element.id,
                     label:

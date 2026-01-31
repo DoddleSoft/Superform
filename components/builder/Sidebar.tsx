@@ -20,7 +20,8 @@ import {
     LuHeading,
     LuFileText,
     LuGripVertical,
-    LuListChecks
+    LuListChecks,
+    LuUpload
 } from "react-icons/lu";
 import { ReactNode } from "react";
 
@@ -40,6 +41,7 @@ const ELEMENT_ICONS: Record<FormElementType, ReactNode> = {
     [FormElementType.CHECKBOX]: <LuSquareCheck className="w-4 h-4" />,
     [FormElementType.HEADING]: <LuHeading className="w-4 h-4" />,
     [FormElementType.RICH_TEXT]: <LuFileText className="w-4 h-4" />,
+    [FormElementType.FILE_UPLOAD]: <LuUpload className="w-4 h-4" />,
 };
 
 // Element categories for organization
@@ -72,6 +74,7 @@ const elementCategories = [
             FormElementType.RATING,
             FormElementType.DATE,
             FormElementType.CHECKBOX,
+            FormElementType.FILE_UPLOAD,
         ],
     },
     {

@@ -13,6 +13,7 @@ export enum FormElementType {
     YES_NO = "YesNo",
     HEADING = "Heading",
     RICH_TEXT = "RichText",
+    FILE_UPLOAD = "FileUpload",
 }
 
 // Form display styles

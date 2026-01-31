@@ -15,6 +15,7 @@ import { RatingFieldFormElement } from "./fields/RatingField";
 import { YesNoFieldFormElement } from "./fields/YesNoField";
 import { HeadingFieldFormElement } from "./fields/HeadingField";
 import { RichTextFieldFormElement } from "./fields/RichTextField";
+import { FileUploadFormElement } from "./fields/FileUploadField";
 
 export const FormElements: Record<FormElementType, FormElementHelper> = {
     [FormElementType.TEXT_FIELD]: TextFieldFormElement,
@@ -31,4 +32,5 @@ export const FormElements: Record<FormElementType, FormElementHelper> = {
     [FormElementType.YES_NO]: YesNoFieldFormElement,
     [FormElementType.HEADING]: HeadingFieldFormElement,
     [FormElementType.RICH_TEXT]: RichTextFieldFormElement,
+    [FormElementType.FILE_UPLOAD]: FileUploadFormElement,
 };
