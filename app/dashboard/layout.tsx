@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
-import { ToastProvider } from "@/context/ToastContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WorkspaceSettingsModal } from "@/components/dashboard";
 import Link from "next/link";
@@ -19,8 +18,7 @@ export default function DashboardLayout({
 
     return (
         <WorkspaceProvider>
-            <ToastProvider>
-                <div className="min-h-screen bg-base-200">
+            <div className="min-h-screen bg-base-200">
                     {/* Top Header Bar */}
                     <header className="bg-base-100 border-b border-base-200 sticky top-0 z-40">
                         <div className="flex items-center justify-between h-14 px-4 lg:px-6 max-w-7xl mx-auto">
@@ -106,7 +104,6 @@ export default function DashboardLayout({
                         />
                     )}
                 </div>
-            </ToastProvider>
         </WorkspaceProvider>
     );
 }

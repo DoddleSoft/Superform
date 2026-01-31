@@ -8,8 +8,16 @@ import {
     Dispatch,
     SetStateAction,
     useCallback,
+    useMemo,
 } from "react";
 import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+
+// Published snapshot for diff comparison
+interface PublishedSnapshot {
+    content: FormContent | null;
+    style: FormStyle | null;
+    designSettings: FormDesignSettings | null;
+}
 
 type FormBuilderContextType = {
     // Section management
@@ -39,7 +47,15 @@ type FormBuilderContextType = {
     formId: string | null;
     isPublished: boolean;
     shareUrl: string | null;
-    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle, designSettings?: FormDesignSettings, versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }) => void;
+    setFormMetadata: (
+        id: string, 
+        published: boolean, 
+        shareUrl: string | null, 
+        style?: FormStyle, 
+        designSettings?: FormDesignSettings, 
+        versionInfo?: { currentVersion: number; publishedAt: string | null },
+        publishedSnapshot?: PublishedSnapshot
+    ) => void;
     
     // Form Style
     formStyle: FormStyle;
@@ -56,10 +72,12 @@ type FormBuilderContextType = {
     
     // Versioning
     currentVersion: number;
-    hasUnpublishedChanges: boolean;
+    hasUnpublishedChanges: boolean; // Now computed from diff
     publishedAt: string | null;
-    setHasUnpublishedChanges: Dispatch<SetStateAction<boolean>>;
-    setVersionInfo: (version: number, hasChanges: boolean, publishedAt: string | null) => void;
+    setVersionInfo: (version: number, publishedAt: string | null) => void;
+    
+    // Published snapshot management
+    updatePublishedSnapshot: (snapshot: PublishedSnapshot) => void;
     
     // Selected section for properties panel
     selectedSection: FormSection | null;
@@ -69,6 +87,15 @@ type FormBuilderContextType = {
 const FormBuilderContext = createContext<FormBuilderContextType | undefined>(
     undefined
 );
+
+// Helper to create a stable string representation for comparison
+function createFormSnapshot(
+    content: FormContent | null,
+    style: FormStyle | null,
+    designSettings: FormDesignSettings | null
+): string {
+    return JSON.stringify({ content, style, designSettings });
+}
 
 export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [sections, setSections] = useState<FormSection[]>([]);
@@ -84,8 +111,42 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     
     // Versioning state
     const [currentVersion, setCurrentVersion] = useState<number>(0);
-    const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState<boolean>(false);
     const [publishedAt, setPublishedAt] = useState<string | null>(null);
+    
+    // Published snapshot for diff-based comparison
+    const [publishedSnapshot, setPublishedSnapshot] = useState<PublishedSnapshot>({
+        content: null,
+        style: null,
+        designSettings: null,
+    });
+
+    // Compute hasUnpublishedChanges by comparing current state with published snapshot
+    const hasUnpublishedChanges = useMemo(() => {
+        // If never published, no "unpublished changes" concept applies
+        if (!isPublished) {
+            return false;
+        }
+        
+        // If published snapshot is empty (no published content), consider no changes
+        if (publishedSnapshot.content === null) {
+            return false;
+        }
+        
+        // Create string representations for comparison
+        const currentSnapshot = createFormSnapshot(sections, formStyle, designSettings);
+        const publishedSnapshotStr = createFormSnapshot(
+            publishedSnapshot.content,
+            publishedSnapshot.style,
+            publishedSnapshot.designSettings
+        );
+        
+        // Compare the two snapshots
+        return currentSnapshot !== publishedSnapshotStr;
+    }, [isPublished, sections, formStyle, designSettings, publishedSnapshot]);
+
+    const updatePublishedSnapshot = useCallback((snapshot: PublishedSnapshot) => {
+        setPublishedSnapshot(snapshot);
+    }, []);
 
     const setFormMetadata = useCallback((
         id: string, 
@@ -93,7 +154,8 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         url: string | null, 
         style?: FormStyle,
         designSettingsData?: FormDesignSettings,
-        versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }
+        versionInfo?: { currentVersion: number; publishedAt: string | null },
+        snapshot?: PublishedSnapshot
     ) => {
         setFormId(id);
         setIsPublished(published);
@@ -106,8 +168,10 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
         if (versionInfo) {
             setCurrentVersion(versionInfo.currentVersion);
-            setHasUnpublishedChanges(versionInfo.hasUnpublishedChanges);
             setPublishedAt(versionInfo.publishedAt);
+        }
+        if (snapshot) {
+            setPublishedSnapshot(snapshot);
         }
     }, []);
 
@@ -119,9 +183,8 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         setDesignSettings(prev => ({ ...prev, [key]: value }));
     }, []);
 
-    const setVersionInfo = useCallback((version: number, hasChanges: boolean, pubAt: string | null) => {
+    const setVersionInfo = useCallback((version: number, pubAt: string | null) => {
         setCurrentVersion(version);
-        setHasUnpublishedChanges(hasChanges);
         setPublishedAt(pubAt);
     }, []);
 
@@ -309,8 +372,8 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 currentVersion,
                 hasUnpublishedChanges,
                 publishedAt,
-                setHasUnpublishedChanges,
                 setVersionInfo,
+                updatePublishedSnapshot,
                 selectedSection,
                 setSelectedSection,
             }}

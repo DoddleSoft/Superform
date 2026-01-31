@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { cookies } from "next/headers";
+import { ToastProvider } from "@/context/ToastContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,11 +30,14 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en" data-theme={theme}>
+      <html lang="en" data-theme={theme} suppressHydrationWarning>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          suppressHydrationWarning
         >
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </body>
       </html>
     </ClerkProvider>

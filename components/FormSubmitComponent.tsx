@@ -9,6 +9,7 @@ import { LuChevronLeft, LuChevronRight, LuCheck } from "react-icons/lu";
 import { ClassicRenderer } from "./renderers/ClassicRenderer";
 import { TypeformRenderer } from "./renderers/TypeformRenderer";
 import { getButtonStyle, FONT_FAMILY_MAP } from "@/lib/designUtils";
+import { useToast } from "@/context/ToastContext";
 
 // Generate a unique session ID for this form submission attempt
 function generateSessionId(): string {
@@ -33,6 +34,7 @@ export function FormSubmitComponent({
     version = 1, // Default version
 }: FormSubmitComponentProps) {
     const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
+    const toast = useToast();
     const formValues = useRef<{ [key: string]: string }>({});
     const formErrors = useRef<{ [key: string]: boolean }>({});
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -205,7 +207,7 @@ export function FormSubmitComponent({
                 setSubmitted(true);
             } catch (error) {
                 console.error(error);
-                alert("Something went wrong");
+                toast.error("Something went wrong. Please try again.");
             }
         });
     };

@@ -84,7 +84,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
         if (error) {
             console.error("Error creating default workspace:", error);
-            alert(`Failed to create default workspace: ${error.message} (Code: ${error.code})`);
+            // Silent error - user will see empty workspace and can create one manually
         } else if (data) {
             console.log("Default workspace created:", data);
             setWorkspaces([data]);

@@ -26,6 +26,7 @@ import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { useToast } from "@/context/ToastContext";
 
 type TabType = "build" | "integrate" | "settings" | "share" | "results";
 
@@ -42,11 +43,12 @@ export function BuilderHeader({
     lastSavedAt: Date | null;
     formName?: string;
 }) {
-    const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl } = useFormBuilder();
+    const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl, sections, formStyle, designSettings, updatePublishedSnapshot } = useFormBuilder();
     const [loading, startTransition] = useTransition();
     const [showVersionHistory, setShowVersionHistory] = useState(false);
     const router = useRouter();
     const { userId } = useAuth();
+    const toast = useToast();
 
     const handlePublish = async () => {
         if (!formId || !userId) return;
@@ -54,6 +56,13 @@ export function BuilderHeader({
             try {
                 const result = await publishForm(formId, userId);
                 if (result) {
+                    // Update published snapshot with current state (now becomes the new published version)
+                    updatePublishedSnapshot({
+                        content: sections,
+                        style: formStyle,
+                        designSettings: designSettings,
+                    });
+                    
                     setFormMetadata(
                         result.id, 
                         result.published, 
@@ -62,20 +71,20 @@ export function BuilderHeader({
                         result.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...result.design_settings } : DEFAULT_DESIGN_SETTINGS,
                         {
                             currentVersion: result.current_version,
-                            hasUnpublishedChanges: result.has_unpublished_changes,
                             publishedAt: result.published_at,
                         }
                     );
                     if (!isPublished) {
                         // First publish
-                        alert(`Form Published! Share URL: ${window.location.origin}/submit/${result.share_url}`);
+                        toast.success(`Form published! Share URL copied to clipboard.`);
+                        navigator.clipboard.writeText(`${window.location.origin}/submit/${result.share_url}`);
                     } else {
-                        alert("Form republished successfully!");
+                        toast.success("Form republished successfully!");
                     }
                 }
             } catch (error) {
                 console.error("Failed to publish", error);
-                alert("Failed to publish form");
+                toast.error("Failed to publish form");
             }
         });
     };
@@ -247,7 +256,7 @@ export function BuilderHeader({
                         </button>
                     )}
 
-                    {/* Publish / Republish */}
+                    {/* Publish / Republish / Published */}
                     <button
                         className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                             loading 
@@ -255,16 +264,25 @@ export function BuilderHeader({
                                 : hasUnpublishedChanges 
                                     ? "bg-warning text-warning-content hover:bg-warning/90 shadow-sm" 
                                     : isPublished 
-                                        ? "bg-base-200 text-base-content/70 hover:bg-base-300" 
+                                        ? "bg-base-200 text-base-content/50 cursor-not-allowed" 
                                         : "bg-primary text-primary-content hover:bg-primary/90 shadow-sm"
                         }`}
                         onClick={handlePublish}
-                        disabled={loading}
+                        disabled={loading || (isPublished && !hasUnpublishedChanges)}
+                        title={
+                            isPublished && !hasUnpublishedChanges 
+                                ? "Form is up to date" 
+                                : hasUnpublishedChanges 
+                                    ? "Publish your changes" 
+                                    : "Publish your form"
+                        }
                     >
                         {loading ? (
                             <LuLoader className="w-4 h-4 animate-spin" />
                         ) : hasUnpublishedChanges ? (
                             <LuCircleAlert className="w-4 h-4" />
+                        ) : isPublished ? (
+                            <LuCheck className="w-4 h-4" />
                         ) : (
                             <LuRocket className="w-4 h-4" />
                         )}

@@ -43,23 +43,41 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
         if (form) {
             // Handle both old format (flat array) and new format (sections)
             const content = form.content || [];
+            let sectionsToSet: FormSection[];
+            
             if (Array.isArray(content) && content.length > 0) {
                 // Check if it's the new section format
                 if (content[0]?.elements !== undefined) {
                     // New section format
-                    setSections(content);
+                    sectionsToSet = content;
                 } else {
                     // Old flat array format - migrate to section format
                     const defaultSection = createSection(crypto.randomUUID(), "Section 1");
                     defaultSection.elements = content;
-                    setSections([defaultSection]);
+                    sectionsToSet = [defaultSection];
                 }
             } else {
                 // Empty content - create a default section
                 const defaultSection = createSection(crypto.randomUUID(), "Section 1");
-                setSections([defaultSection]);
+                sectionsToSet = [defaultSection];
             }
-            // Set form metadata including style and versioning info
+            
+            setSections(sectionsToSet);
+            
+            // Build published snapshot for diff comparison
+            const publishedSnapshot = form.published ? {
+                content: form.published_content,
+                style: form.published_style,
+                designSettings: form.published_design_settings 
+                    ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings } 
+                    : null,
+            } : {
+                content: null,
+                style: null,
+                designSettings: null,
+            };
+            
+            // Set form metadata including style, versioning info, and published snapshot
             setFormMetadata(
                 form.id,
                 form.published,
@@ -68,9 +86,9 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
                 {
                     currentVersion: form.current_version || 1,
-                    hasUnpublishedChanges: form.has_unpublished_changes || false,
                     publishedAt: form.published_at || null,
-                }
+                },
+                publishedSnapshot
             );
         }
     }, [form, setSections, setFormMetadata]);

@@ -14,7 +14,7 @@ interface VersionHistoryModalProps {
 }
 
 export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProps) {
-    const { formId, currentVersion, setSections, setFormStyle, setDesignSettings, setHasUnpublishedChanges } = useFormBuilder();
+    const { formId, currentVersion, setSections, setFormStyle, setDesignSettings } = useFormBuilder();
     const toast = useToast();
     const [versions, setVersions] = useState<FormVersion[]>([]);
     const [loading, setLoading] = useState(false);
@@ -44,10 +44,10 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                 const result = await restoreFormVersion(formId, version.version);
                 if (result) {
                     // Update local state with restored content
+                    // The diff-based comparison will automatically detect unpublished changes
                     setSections(result.content || []);
                     setFormStyle(result.style || 'classic');
                     setDesignSettings(result.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...result.design_settings } : DEFAULT_DESIGN_SETTINGS);
-                    setHasUnpublishedChanges(true);
                     onClose();
                     toast.success(`Restored to version ${version.version}. Click Republish to make it live.`);
                 }
