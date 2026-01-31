@@ -6,7 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { LuFileText } from "react-icons/lu";
+import { LuFileText, LuType, LuSettings, LuEye } from "react-icons/lu";
+import { 
+    PropertySection, 
+    PropertyTextarea,
+    PropertySelect 
+} from "@/components/builder/properties";
 
 const type: FormElementType = FormElementType.RICH_TEXT;
 
@@ -133,50 +138,36 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     const previewHtml = parseMarkdown(watchContent || "");
 
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Content</span>
-                </label>
-                <textarea
-                    className="textarea textarea-bordered w-full font-mono text-sm"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyTextarea
+                    label="Content"
+                    description="Supports **bold**, *italic*, [links](url)"
                     rows={8}
                     placeholder="Write your content here. Supports markdown..."
+                    className="font-mono text-sm"
                     {...form.register("content")}
                 />
-                <label className="label">
-                    <span className="label-text-alt">
-                        Supports **bold**, *italic*, [links](url)
-                    </span>
-                </label>
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Preview</span>
-                </label>
+            <PropertySection title="Preview" icon={<LuEye className="w-3.5 h-3.5" />} collapsible={true}>
                 <div 
-                    className="p-3 bg-base-200 rounded-lg text-sm prose prose-sm max-w-none"
+                    className="p-3 bg-base-200 rounded-lg text-sm prose prose-sm max-w-none min-h-[60px]"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Text Alignment</span>
-                </label>
-                <select
-                    className="select select-bordered w-full"
+            <PropertySection title="Appearance" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertySelect
+                    label="Text Alignment"
+                    options={[
+                        { value: "left", label: "Left" },
+                        { value: "center", label: "Center" },
+                        { value: "right", label: "Right" },
+                    ]}
                     {...form.register("align")}
-                >
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                </select>
-            </div>
+                />
+            </PropertySection>
         </form>
     );
 }

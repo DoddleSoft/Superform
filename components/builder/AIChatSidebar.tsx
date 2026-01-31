@@ -2,9 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAIChat, FormToolAction } from "@/context/AIChatContext";
-import { FiSend, FiX, FiCheck, FiPlus, FiEdit2, FiList } from "react-icons/fi";
-import { BsStars } from "react-icons/bs";
-import { MdDeleteOutline } from "react-icons/md";
+import { LuSend, LuX, LuCheck, LuPlus, LuPenLine, LuList, LuTrash2, LuSparkles, LuArrowRight, LuSquare } from "react-icons/lu";
 import { GeneratedFormElement } from "@/lib/formElementSchema";
 
 export function AIChatSidebar() {
@@ -108,17 +106,17 @@ export function AIChatSidebar() {
     const getActionIcon = (action: FormToolAction) => {
         switch (action.type) {
             case "addFields":
-                return <FiPlus className="w-4 h-4" />;
+                return <LuPlus className="w-3.5 h-3.5" />;
             case "deleteFields":
-                return <MdDeleteOutline className="w-4 h-4" />;
+                return <LuTrash2 className="w-3.5 h-3.5" />;
             case "updateField":
-                return <FiEdit2 className="w-4 h-4" />;
+                return <LuPenLine className="w-3.5 h-3.5" />;
             case "replaceForm":
-                return <FiList className="w-4 h-4" />;
+                return <LuList className="w-3.5 h-3.5" />;
             case "reorderFields":
-                return <FiList className="w-4 h-4" />;
+                return <LuList className="w-3.5 h-3.5" />;
             default:
-                return <FiCheck className="w-4 h-4" />;
+                return <LuCheck className="w-3.5 h-3.5" />;
         }
     };
 
@@ -131,38 +129,46 @@ export function AIChatSidebar() {
     return (
         <div className="h-full bg-base-100 flex flex-col overflow-hidden">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {isLoadingSession ? (
-                    <div className="flex items-center justify-center py-8">
-                        <span className="loading loading-spinner loading-md"></span>
+                    <div className="flex items-center justify-center py-12">
+                        <span className="loading loading-spinner loading-md text-primary"></span>
                     </div>
                 ) : messages.length === 0 ? (
-                    <div className="text-center py-8 text-base-content/60">
-                        <BsStars className="w-12 h-12 mx-auto mb-4 text-primary/40" />
-                        <p className="font-medium">Start building your form</p>
-                        <p className="text-sm mt-2">
-                            Describe the form you want to create and I'll generate it for you.
+                    <div className="flex flex-col items-center justify-center py-8 px-4">
+                        {/* Empty State */}
+                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                            <LuSparkles className="w-8 h-8 text-primary" />
+                        </div>
+                        <h3 className="font-semibold text-base-content text-center">AI Form Builder</h3>
+                        <p className="text-sm text-base-content/60 text-center mt-1 mb-6">
+                            Describe your form and I'll create it for you
                         </p>
-                        <div className="mt-4 space-y-2">
-                            <p className="text-xs text-base-content/40">Try saying:</p>
-                            <div className="space-y-1">
-                                {[
-                                    "Create a contact form",
-                                    "Build a job application form",
-                                    "Make a feedback survey",
-                                ].map((suggestion) => (
-                                    <button
-                                        key={suggestion}
-                                        onClick={() => {
-                                            setInput(suggestion);
-                                            inputRef.current?.focus();
-                                        }}
-                                        className="block w-full text-left px-3 py-2 text-sm bg-base-200 hover:bg-base-300 rounded-lg transition-colors"
-                                    >
-                                        "{suggestion}"
-                                    </button>
-                                ))}
-                            </div>
+                        
+                        {/* Suggestions */}
+                        <div className="w-full space-y-2">
+                            <p className="text-[10px] uppercase tracking-wider text-base-content/40 font-medium px-1">
+                                Try saying
+                            </p>
+                            {[
+                                "Create a contact form",
+                                "Build a job application form",
+                                "Make a feedback survey",
+                            ].map((suggestion) => (
+                                <button
+                                    key={suggestion}
+                                    onClick={() => {
+                                        setInput(suggestion);
+                                        inputRef.current?.focus();
+                                    }}
+                                    className="group flex items-center gap-2 w-full text-left px-3 py-2.5 text-sm bg-base-200/50 hover:bg-base-200 rounded-lg transition-colors"
+                                >
+                                    <LuArrowRight className="w-3.5 h-3.5 text-base-content/40 group-hover:text-primary transition-colors" />
+                                    <span className="text-base-content/70 group-hover:text-base-content transition-colors">
+                                        {suggestion}
+                                    </span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 ) : (
@@ -179,17 +185,17 @@ export function AIChatSidebar() {
                                 }`}
                             >
                                 <div
-                                    className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                                    className={`max-w-[90%] rounded-2xl px-4 py-2.5 ${
                                         message.role === "user"
                                             ? "bg-primary text-primary-content rounded-br-md"
-                                            : "bg-base-200 rounded-bl-md"
+                                            : "bg-base-200/70 rounded-bl-md"
                                     }`}
                                 >
                                     {/* Render text parts */}
                                     {(message.parts || []).map((part: any, index: number) => {
                                         if (part.type === "text" && part.text?.trim()) {
                                             return (
-                                                <p key={index} className="whitespace-pre-wrap text-sm">
+                                                <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed">
                                                     {part.text}
                                                 </p>
                                             );
@@ -199,22 +205,18 @@ export function AIChatSidebar() {
 
                                     {/* Render tool actions preview */}
                                     {toolActions.length > 0 && (
-                                        <div className="mt-3 pt-3 border-t border-base-300">
-                                            <div className="text-xs font-medium mb-2 opacity-70">
+                                        <div className="mt-3 pt-3 border-t border-base-content/10">
+                                            <div className="text-[10px] font-semibold uppercase tracking-wider mb-2 opacity-60">
                                                 {getActionsDescription(toolActions)}
                                             </div>
                                             
                                             {/* Show preview for each action */}
-                                            <div className="space-y-2 mb-3">
+                                            <div className="space-y-1.5 mb-3">
                                                 {toolActions.map((action, actionIndex) => (
                                                     <div key={actionIndex} className="space-y-1">
                                                         {/* Add fields preview */}
                                                         {action.type === "addFields" && (
                                                             <div className="space-y-1">
-                                                                <div className="flex items-center gap-1 text-xs text-success">
-                                                                    <FiPlus className="w-3 h-3" />
-                                                                    <span>Adding:</span>
-                                                                </div>
                                                                 {action.elements
                                                                     .map((el, i) => {
                                                                         // Get display label based on field type
@@ -223,12 +225,13 @@ export function AIChatSidebar() {
                                                                         return (
                                                                             <div
                                                                                 key={i}
-                                                                                className="flex items-center gap-2 text-xs bg-success/10 px-2 py-1 rounded"
+                                                                                className="flex items-center gap-2 text-xs bg-success/10 px-2.5 py-1.5 rounded-lg"
                                                                             >
-                                                                                <span className="badge badge-xs badge-outline badge-success">
+                                                                                <LuPlus className="w-3 h-3 text-success shrink-0" />
+                                                                                <span className="badge badge-xs bg-success/20 text-success border-0">
                                                                                     {el.type}
                                                                                 </span>
-                                                                                <span className="truncate">
+                                                                                <span className="truncate text-success/80">
                                                                                     {String(displayLabel)}
                                                                                 </span>
                                                                             </div>
@@ -239,16 +242,16 @@ export function AIChatSidebar() {
 
                                                         {/* Delete fields preview */}
                                                         {action.type === "deleteFields" && (
-                                                            <div className="text-xs text-error flex items-center gap-1">
-                                                                <MdDeleteOutline className="w-3 h-3" />
+                                                            <div className="flex items-center gap-2 text-xs bg-error/10 px-2.5 py-1.5 rounded-lg text-error">
+                                                                <LuTrash2 className="w-3 h-3 shrink-0" />
                                                                 <span>{action.fieldIds.length} field(s) will be removed</span>
                                                             </div>
                                                         )}
 
                                                         {/* Update field preview */}
                                                         {action.type === "updateField" && action.updates && (
-                                                            <div className="text-xs bg-warning/10 px-2 py-1 rounded flex items-center gap-1">
-                                                                <FiEdit2 className="w-3 h-3" />
+                                                            <div className="flex items-center gap-2 text-xs bg-warning/10 px-2.5 py-1.5 rounded-lg text-warning">
+                                                                <LuPenLine className="w-3 h-3 shrink-0" />
                                                                 <span>
                                                                     Updating: {Object.keys(action.updates.extraAttributes || {}).join(", ")}
                                                                     {action.updates.type && ` (type → ${action.updates.type})`}
@@ -259,20 +262,17 @@ export function AIChatSidebar() {
                                                         {/* Replace form preview */}
                                                         {action.type === "replaceForm" && (
                                                             <div className="space-y-1">
-                                                                <div className="flex items-center gap-1 text-xs text-info">
-                                                                    <FiList className="w-3 h-3" />
-                                                                    <span>Replacing form with {action.sections?.length || 0} section(s)</span>
-                                                                </div>
                                                                 {action.sections?.map((section: any, i: number) => (
                                                                     <div
                                                                         key={i}
-                                                                        className="flex items-center gap-2 text-xs bg-info/10 px-2 py-1 rounded"
+                                                                        className="flex items-center gap-2 text-xs bg-info/10 px-2.5 py-1.5 rounded-lg"
                                                                     >
-                                                                        <span className="badge badge-xs badge-outline badge-info">
+                                                                        <LuList className="w-3 h-3 text-info shrink-0" />
+                                                                        <span className="badge badge-xs bg-info/20 text-info border-0">
                                                                             Section
                                                                         </span>
-                                                                        <span className="truncate">
-                                                                            {section.title} ({section.elements?.length || 0} elements)
+                                                                        <span className="truncate text-info/80">
+                                                                            {section.title} ({section.elements?.length || 0} fields)
                                                                         </span>
                                                                     </div>
                                                                 ))}
@@ -281,8 +281,8 @@ export function AIChatSidebar() {
 
                                                         {/* Reorder preview */}
                                                         {action.type === "reorderFields" && (
-                                                            <div className="text-xs bg-base-100/50 px-2 py-1 rounded flex items-center gap-1">
-                                                                <FiList className="w-3 h-3" />
+                                                            <div className="flex items-center gap-2 text-xs bg-base-300/50 px-2.5 py-1.5 rounded-lg">
+                                                                <LuList className="w-3 h-3 shrink-0" />
                                                                 <span>Reordering {action.fieldIds.length} field(s)</span>
                                                             </div>
                                                         )}
@@ -293,9 +293,9 @@ export function AIChatSidebar() {
                                             {appliedMessageIds.has(message.id) ? (
                                                 <button
                                                     disabled
-                                                    className="btn btn-success btn-sm w-full gap-2"
+                                                    className="btn btn-sm w-full gap-2 bg-success/10 text-success border-success/20 hover:bg-success/10"
                                                 >
-                                                    <FiCheck className="w-4 h-4" />
+                                                    <LuCheck className="w-4 h-4" />
                                                     Applied
                                                 </button>
                                             ) : (
@@ -303,7 +303,7 @@ export function AIChatSidebar() {
                                                     onClick={() => handleApplyActions(toolActions, message.id)}
                                                     className="btn btn-primary btn-sm w-full gap-2"
                                                 >
-                                                    <FiCheck className="w-4 h-4" />
+                                                    <LuCheck className="w-4 h-4" />
                                                     Apply Changes
                                                 </button>
                                             )}
@@ -318,9 +318,9 @@ export function AIChatSidebar() {
                 {/* Streaming indicator */}
                 {(status === "submitted" || status === "streaming") && (
                     <div className="flex justify-start">
-                        <div className="bg-base-200 rounded-2xl rounded-bl-md px-4 py-2">
+                        <div className="bg-base-200/70 rounded-2xl rounded-bl-md px-4 py-3">
                             <div className="flex items-center gap-2">
-                                <span className="loading loading-dots loading-sm"></span>
+                                <span className="loading loading-dots loading-sm text-primary"></span>
                                 <span className="text-sm text-base-content/60">
                                     {status === "submitted" ? "Thinking..." : "Generating..."}
                                 </span>
@@ -331,8 +331,8 @@ export function AIChatSidebar() {
 
                 {/* Error display */}
                 {error && (
-                    <div className="alert alert-error">
-                        <span className="text-sm">Something went wrong. Please try again.</span>
+                    <div className="mx-2 p-3 rounded-lg bg-error/10 border border-error/20">
+                        <p className="text-sm text-error">Something went wrong. Please try again.</p>
                     </div>
                 )}
 
@@ -340,7 +340,7 @@ export function AIChatSidebar() {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-base-300 bg-base-100">
+            <div className="p-3 border-t border-base-200 bg-base-100/80 backdrop-blur shrink-0">
                 <form onSubmit={handleSubmit} className="flex gap-2">
                     <input
                         ref={inputRef}
@@ -348,25 +348,25 @@ export function AIChatSidebar() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Describe your form..."
-                        className="input input-bordered flex-1"
+                        className="input input-bordered input-sm flex-1 focus:input-primary"
                         disabled={status !== "ready"}
                     />
                     {status === "streaming" || status === "submitted" ? (
                         <button
                             type="button"
                             onClick={stop}
-                            className="btn btn-ghost btn-square"
+                            className="btn btn-ghost btn-sm btn-square text-base-content/60 hover:text-error"
                             title="Stop generating"
                         >
-                            <FiX className="w-5 h-5" />
+                            <LuSquare className="w-4 h-4" />
                         </button>
                     ) : (
                         <button
                             type="submit"
-                            className="btn btn-primary btn-square"
+                            className="btn btn-primary btn-sm btn-square"
                             disabled={!input.trim() || status !== "ready"}
                         >
-                            <FiSend className="w-5 h-5" />
+                            <LuSend className="w-4 h-4" />
                         </button>
                     )}
                 </form>

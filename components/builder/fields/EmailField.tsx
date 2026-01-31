@@ -7,6 +7,12 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MdEmail } from "react-icons/md";
+import { 
+    PropertySection, 
+    PropertyField, 
+    PropertyToggle 
+} from "@/components/builder/properties";
+import { LuType, LuSettings } from "react-icons/lu";
 
 const type: FormElementType = FormElementType.EMAIL;
 
@@ -186,74 +192,43 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }
 
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Label</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Label"
+                    description="The question or prompt shown to users"
                     {...form.register("label")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">The label of the field.</span>
-                </label>
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Placeholder</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Placeholder"
+                    description="Example text shown when empty"
                     {...form.register("placeholder")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">The placeholder of the field.</span>
-                </label>
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Helper Text</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Helper Text"
+                    description="Additional guidance below the field"
                     {...form.register("helperText")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">Displayed below the field.</span>
-                </label>
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label cursor-pointer">
-                    <span className="label-text">Required</span>
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        {...form.register("required")}
-                    />
-                </label>
-                <label className="label">
-                    <span className="label-text-alt">Is this field required?</span>
-                </label>
-            </div>
+            <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertyToggle
+                    label="Required"
+                    description="Users must fill this field to submit"
+                    {...form.register("required")}
+                />
+            </PropertySection>
         </form>
     );
 }

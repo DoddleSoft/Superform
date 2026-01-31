@@ -6,7 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { LuHeading } from "react-icons/lu";
+import { LuHeading, LuType, LuSettings } from "react-icons/lu";
+import { 
+    PropertySection, 
+    PropertyField, 
+    PropertyTextarea,
+    PropertySelect 
+} from "@/components/builder/properties";
 
 const type: FormElementType = FormElementType.HEADING;
 
@@ -131,66 +137,48 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }
 
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Title</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Title"
+                    description="The main heading text"
                     {...form.register("title")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Subtitle</span>
-                </label>
-                <textarea
-                    className="textarea textarea-bordered w-full"
+                <PropertyTextarea
+                    label="Subtitle"
+                    description="Optional text below the heading"
                     rows={2}
                     {...form.register("subtitle")}
                 />
-                <label className="label">
-                    <span className="label-text-alt">Optional text below the heading</span>
-                </label>
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Heading Level</span>
-                </label>
-                <select
-                    className="select select-bordered w-full"
+            <PropertySection title="Appearance" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertySelect
+                    label="Heading Level"
+                    description="Controls the size and importance"
+                    options={[
+                        { value: "h1", label: "H1 - Largest" },
+                        { value: "h2", label: "H2 - Large" },
+                        { value: "h3", label: "H3 - Medium" },
+                        { value: "h4", label: "H4 - Small" },
+                    ]}
                     {...form.register("level")}
-                >
-                    <option value="h1">H1 - Largest</option>
-                    <option value="h2">H2 - Large</option>
-                    <option value="h3">H3 - Medium</option>
-                    <option value="h4">H4 - Small</option>
-                </select>
-            </div>
+                />
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Text Alignment</span>
-                </label>
-                <select
-                    className="select select-bordered w-full"
+                <PropertySelect
+                    label="Text Alignment"
+                    options={[
+                        { value: "left", label: "Left" },
+                        { value: "center", label: "Center" },
+                        { value: "right", label: "Right" },
+                    ]}
                     {...form.register("align")}
-                >
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                </select>
-            </div>
+                />
+            </PropertySection>
         </form>
     );
 }

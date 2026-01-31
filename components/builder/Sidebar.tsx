@@ -5,11 +5,48 @@ import { FormElementType } from "@/types/form-builder";
 import { useDraggable } from "@dnd-kit/core";
 import { FormElements } from "./FormElements";
 import { motion } from "@/lib/animations";
+import { 
+    LuType, 
+    LuAlignLeft, 
+    LuMail, 
+    LuPhone, 
+    LuHash, 
+    LuCircleDot, 
+    LuChevronDown, 
+    LuToggleLeft, 
+    LuStar, 
+    LuCalendar, 
+    LuSquareCheck,
+    LuHeading,
+    LuFileText,
+    LuGripVertical,
+    LuListChecks
+} from "react-icons/lu";
+import { ReactNode } from "react";
+
+// Element icons mapping
+const ELEMENT_ICONS: Record<FormElementType, ReactNode> = {
+    [FormElementType.TEXT_FIELD]: <LuType className="w-4 h-4" />,
+    [FormElementType.TEXTAREA]: <LuAlignLeft className="w-4 h-4" />,
+    [FormElementType.EMAIL]: <LuMail className="w-4 h-4" />,
+    [FormElementType.PHONE]: <LuPhone className="w-4 h-4" />,
+    [FormElementType.NUMBER]: <LuHash className="w-4 h-4" />,
+    [FormElementType.RADIO_GROUP]: <LuCircleDot className="w-4 h-4" />,
+    [FormElementType.CHECKBOX_GROUP]: <LuListChecks className="w-4 h-4" />,
+    [FormElementType.SELECT]: <LuChevronDown className="w-4 h-4" />,
+    [FormElementType.YES_NO]: <LuToggleLeft className="w-4 h-4" />,
+    [FormElementType.RATING]: <LuStar className="w-4 h-4" />,
+    [FormElementType.DATE]: <LuCalendar className="w-4 h-4" />,
+    [FormElementType.CHECKBOX]: <LuSquareCheck className="w-4 h-4" />,
+    [FormElementType.HEADING]: <LuHeading className="w-4 h-4" />,
+    [FormElementType.RICH_TEXT]: <LuFileText className="w-4 h-4" />,
+};
 
 // Element categories for organization
 const elementCategories = [
     {
         name: "Text Inputs",
+        description: "Collect text responses",
         elements: [
             FormElementType.TEXT_FIELD,
             FormElementType.TEXTAREA,
@@ -20,6 +57,7 @@ const elementCategories = [
     },
     {
         name: "Choice",
+        description: "Selection options",
         elements: [
             FormElementType.RADIO_GROUP,
             FormElementType.CHECKBOX_GROUP,
@@ -29,6 +67,7 @@ const elementCategories = [
     },
     {
         name: "Other Inputs",
+        description: "Special input types",
         elements: [
             FormElementType.RATING,
             FormElementType.DATE,
@@ -37,6 +76,7 @@ const elementCategories = [
     },
     {
         name: "Display",
+        description: "Text & headings",
         elements: [
             FormElementType.HEADING,
             FormElementType.RICH_TEXT,
@@ -53,28 +93,39 @@ export function Sidebar() {
     const currentElementCount = targetSection?.elements.length ?? 0;
 
     return (
-        <div className="h-full bg-base-100 flex flex-col overflow-y-auto overflow-x-hidden">
-            <div className="p-4 border-b border-base-200 shrink-0">
-                <p className="text-xs text-base-content/50">Drag and drop to add to canvas</p>
+        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-base-200 shrink-0">
+                <div className="flex items-center gap-2 text-base-content/50">
+                    <LuGripVertical className="w-3.5 h-3.5" />
+                    <p className="text-xs">Drag to add or click to insert</p>
+                </div>
             </div>
 
-            <div className="p-4 flex flex-col gap-6 flex-1">
+            {/* Components List */}
+            <div className="flex-1 overflow-y-auto">
                 {elementCategories.map((category, categoryIndex) => (
-                    <div key={category.name} className="flex flex-col gap-2">
-                        <h3 className="text-xs font-semibold text-base-content/50 uppercase tracking-wide">
-                            {category.name}
-                        </h3>
-                        <div className="flex flex-col gap-2">
+                    <div key={category.name} className="border-b border-base-200 last:border-b-0">
+                        {/* Category Header */}
+                        <div className="px-4 py-2.5 bg-base-200/30">
+                            <h3 className="text-xs font-semibold text-base-content/70 uppercase tracking-wider">
+                                {category.name}
+                            </h3>
+                        </div>
+                        
+                        {/* Category Elements */}
+                        <div className="p-2 space-y-1">
                             {category.elements.map((type, index) => (
                                 <motion.div
                                     key={type}
-                                    initial={{ opacity: 0, y: 10 }}
+                                    initial={{ opacity: 0, y: 5 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: (categoryIndex * 0.1) + (index * 0.03), duration: 0.2 }}
+                                    transition={{ delay: (categoryIndex * 0.05) + (index * 0.02), duration: 0.15 }}
                                 >
                                     <SidebarBtnElement
                                         type={type}
                                         label={FormElements[type].label}
+                                        icon={ELEMENT_ICONS[type]}
                                         onAdd={() => {
                                             if (!targetSectionId) return;
                                             const newElement = FormElements[type].construct(crypto.randomUUID());
@@ -91,8 +142,18 @@ export function Sidebar() {
     );
 }
 
-function SidebarBtnElement({ type, label, onAdd }: { type: FormElementType; label: string, onAdd: () => void }) {
-    const { setNodeRef, listeners, attributes } = useDraggable({
+function SidebarBtnElement({ 
+    type, 
+    label, 
+    icon,
+    onAdd 
+}: { 
+    type: FormElementType; 
+    label: string;
+    icon: ReactNode;
+    onAdd: () => void;
+}) {
+    const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
         id: `sidebar-btn-${type}`,
         data: {
             type,
@@ -103,17 +164,24 @@ function SidebarBtnElement({ type, label, onAdd }: { type: FormElementType; labe
     return (
         <div
             ref={setNodeRef}
-            className="card card-compact bg-base-100 border border-base-200 hover:border-primary hover:shadow-md transition-all cursor-grab active:cursor-grabbing group"
+            className={`
+                flex items-center gap-3 px-3 py-2 rounded-lg
+                border border-transparent
+                hover:bg-base-200/50 hover:border-base-300
+                cursor-grab active:cursor-grabbing
+                transition-all duration-150 group
+                ${isDragging ? "opacity-50 shadow-lg" : ""}
+            `}
             onClick={onAdd}
             {...listeners}
             {...attributes}
         >
-            <div className="card-body flex-row items-center gap-3 py-3">
-                <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <span className="font-bold text-xs">{label.substring(0, 2).toUpperCase()}</span>
-                </div>
-                <span className="font-medium text-sm">{label}</span>
+            <div className="w-8 h-8 rounded-lg bg-base-200 text-base-content/60 flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
+                {icon}
             </div>
+            <span className="text-sm font-medium text-base-content/80 group-hover:text-base-content transition-colors truncate">
+                {label}
+            </span>
         </div>
     );
 }

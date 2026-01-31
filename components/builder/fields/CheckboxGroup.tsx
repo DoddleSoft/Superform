@@ -8,7 +8,13 @@ import { useEffect, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { MdCheckBox } from "react-icons/md";
 import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
-import { LuCheck } from "react-icons/lu";
+import { LuCheck, LuType, LuSettings, LuList } from "react-icons/lu";
+import { 
+    PropertySection, 
+    PropertyField, 
+    PropertyToggle,
+    PropertyOptionsEditor 
+} from "@/components/builder/properties";
 
 const type: FormElementType = FormElementType.CHECKBOX_GROUP;
 
@@ -251,127 +257,69 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }
 
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Label</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Label"
+                    description="The question or prompt shown to users"
                     {...form.register("label")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Helper Text</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Helper Text"
+                    description="Additional guidance below the field"
                     {...form.register("helperText")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Options</span>
-                </label>
-                <div className="flex flex-col gap-2">
-                    {fields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2">
-                            <input
-                                type="text"
-                                className="input input-bordered input-sm flex-1"
-                                {...form.register(`options.${index}`)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") e.currentTarget.blur();
-                                }}
-                            />
-                            <button
-                                type="button"
-                                className="btn btn-ghost btn-sm btn-square"
-                                onClick={() => {
-                                    if (fields.length > 1) {
-                                        remove(index);
-                                        form.handleSubmit(applyChanges)();
-                                    }
-                                }}
-                            >
-                                <AiOutlineClose className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-                    <button
-                        type="button"
-                        className="btn btn-outline btn-sm gap-2"
-                        onClick={() => {
-                            append(`Option ${fields.length + 1}`);
-                        }}
-                    >
-                        <AiOutlinePlus className="w-4 h-4" />
-                        Add Option
-                    </button>
-                </div>
-            </div>
+            <PropertySection title="Options" icon={<LuList className="w-3.5 h-3.5" />}>
+                <PropertyOptionsEditor
+                    options={form.watch("options") || []}
+                    onChange={(options) => {
+                        form.setValue("options", options);
+                        form.handleSubmit(applyChanges)();
+                    }}
+                />
+            </PropertySection>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="form-control w-full">
-                    <label className="label">
-                        <span className="label-text">Min Select</span>
-                    </label>
-                    <input
+            <PropertySection title="Selection Limits" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <div className="grid grid-cols-2 gap-4">
+                    <PropertyField
+                        label="Min Select"
+                        description="0 = no minimum"
                         type="number"
                         min={0}
-                        className="input input-bordered w-full"
                         {...form.register("minSelect", { valueAsNumber: true })}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") e.currentTarget.blur();
                         }}
                     />
-                    <label className="label">
-                        <span className="label-text-alt">0 = no minimum</span>
-                    </label>
-                </div>
-                <div className="form-control w-full">
-                    <label className="label">
-                        <span className="label-text">Max Select</span>
-                    </label>
-                    <input
+                    <PropertyField
+                        label="Max Select"
+                        description="0 = no limit"
                         type="number"
                         min={0}
-                        className="input input-bordered w-full"
                         {...form.register("maxSelect", { valueAsNumber: true })}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") e.currentTarget.blur();
                         }}
                     />
-                    <label className="label">
-                        <span className="label-text-alt">0 = no limit</span>
-                    </label>
                 </div>
-            </div>
+            </PropertySection>
 
-            <div className="form-control w-full">
-                <label className="label cursor-pointer">
-                    <span className="label-text">Required</span>
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        {...form.register("required")}
-                    />
-                </label>
-            </div>
+            <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertyToggle
+                    label="Required"
+                    description="Users must select at least one option to submit"
+                    {...form.register("required")}
+                />
+            </PropertySection>
         </form>
     );
 }

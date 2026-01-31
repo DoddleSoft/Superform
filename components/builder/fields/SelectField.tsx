@@ -8,7 +8,13 @@ import { useEffect, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { RxDropdownMenu } from "react-icons/rx";
 import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
-import { LuCheck } from "react-icons/lu";
+import { LuCheck, LuType, LuSettings, LuList } from "react-icons/lu";
+import { 
+    PropertySection, 
+    PropertyField, 
+    PropertyToggle,
+    PropertyOptionsEditor 
+} from "@/components/builder/properties";
 
 const type: FormElementType = FormElementType.SELECT;
 
@@ -185,144 +191,57 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
         });
     }
 
+    const options = form.watch("options");
+
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Label</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Label"
+                    description="The question or prompt shown to users"
                     {...form.register("label")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">The label of the select field.</span>
-                </label>
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Placeholder</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Placeholder"
+                    description="Text shown before selection"
                     {...form.register("placeholder")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">The placeholder of the select field.</span>
-                </label>
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Helper Text</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Helper Text"
+                    description="Additional guidance below the field"
                     {...form.register("helperText")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-                <label className="label">
-                    <span className="label-text-alt">Displayed below the field.</span>
-                </label>
-            </div>
+            </PropertySection>
 
-            <div className="divider">Options</div>
-
-            <FormOptionsEditor form={form} />
-
-            <div className="divider">Settings</div>
-
-            <div className="form-control w-full">
-                <label className="label cursor-pointer">
-                    <span className="label-text">Required</span>
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        {...form.register("required")}
-                    />
-                </label>
-                <label className="label">
-                    <span className="label-text-alt">Is this field required?</span>
-                </label>
-            </div>
-        </form>
-    );
-}
-
-function FormOptionsEditor({ form }: { form: any }) {
-    const options = form.watch("options");
-
-    return (
-        <div className="flex flex-col gap-2">
-            {options.map((option: string, index: number) => (
-                <div key={index} className="flex items-center justify-between gap-1">
-                    <input
-                        className="input input-bordered input-sm flex-grow"
-                        value={option}
-                        onChange={(e) => {
-                            const newOptions = [...options];
-                            newOptions[index] = e.target.value;
-                            form.setValue("options", newOptions);
-                        }}
-                    />
-                    <button
-                        className="btn btn-ghost btn-xs text-error"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            const newOptions = [...options];
-                            newOptions.splice(index, 1);
-                            form.setValue("options", newOptions);
-                        }}
-                    >
-                        <AiOutlineClose />
-                    </button>
-                </div>
-            ))}
-            <div className="flex items-center gap-2 mt-2">
-                <input
-                    className="input input-bordered input-sm flex-grow"
-                    placeholder="New Option"
-                    id="newOptionInput"
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            const val = e.currentTarget.value;
-                            if (val) {
-                                form.setValue("options", [...options, val]);
-                                e.currentTarget.value = "";
-                            }
-                        }
+            <PropertySection title="Options" icon={<LuList className="w-3.5 h-3.5" />} badge={options.length}>
+                <PropertyOptionsEditor
+                    options={options}
+                    onChange={(newOptions) => {
+                        form.setValue("options", newOptions);
+                        form.handleSubmit(applyChanges)();
                     }}
+                    placeholder="Add new option..."
                 />
-                <button
-                    className="btn btn-outline btn-sm"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        const input = document.getElementById("newOptionInput") as HTMLInputElement;
-                        if (input && input.value) {
-                            form.setValue("options", [...options, input.value]);
-                            input.value = "";
-                        }
-                    }}
-                >
-                    Add
-                </button>
-            </div>
-        </div>
+            </PropertySection>
+
+            <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertyToggle
+                    label="Required"
+                    description="Users must select an option to submit"
+                    {...form.register("required")}
+                />
+            </PropertySection>
+        </form>
     );
 }

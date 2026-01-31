@@ -6,8 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { LuCheck, LuX } from "react-icons/lu";
+import { LuCheck, LuX, LuType, LuSettings, LuPenLine } from "react-icons/lu";
 import { BsToggleOn } from "react-icons/bs";
+import { 
+    PropertySection, 
+    PropertyField, 
+    PropertyToggle 
+} from "@/components/builder/properties";
 
 const type: FormElementType = FormElementType.YES_NO;
 
@@ -193,77 +198,54 @@ function PropertiesComponent({ element }: { element: FormElementInstance }) {
     }
 
     return (
-        <form
-            onBlur={form.handleSubmit(applyChanges)}
-            className="flex flex-col gap-4"
-        >
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Label / Question</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+        <form onBlur={form.handleSubmit(applyChanges)}>
+            <PropertySection title="Content" icon={<LuType className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Label / Question"
+                    description="The question shown to users"
                     {...form.register("label")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-            </div>
 
-            <div className="form-control w-full">
-                <label className="label">
-                    <span className="label-text">Helper Text</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered w-full"
+                <PropertyField
+                    label="Helper Text"
+                    description="Additional guidance text"
                     {...form.register("helperText")}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                     }}
                 />
-            </div>
+            </PropertySection>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="form-control w-full">
-                    <label className="label">
-                        <span className="label-text">Yes Label</span>
-                    </label>
-                    <input
-                        type="text"
-                        className="input input-bordered w-full"
-                        {...form.register("yesLabel")}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") e.currentTarget.blur();
-                        }}
-                    />
-                </div>
-                <div className="form-control w-full">
-                    <label className="label">
-                        <span className="label-text">No Label</span>
-                    </label>
-                    <input
-                        type="text"
-                        className="input input-bordered w-full"
-                        {...form.register("noLabel")}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") e.currentTarget.blur();
-                        }}
-                    />
-                </div>
-            </div>
+            <PropertySection title="Button Labels" icon={<LuPenLine className="w-3.5 h-3.5" />}>
+                <PropertyField
+                    label="Yes Label"
+                    description="Text for the 'Yes' button"
+                    {...form.register("yesLabel")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                />
 
-            <div className="form-control w-full">
-                <label className="label cursor-pointer">
-                    <span className="label-text">Required</span>
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        {...form.register("required")}
-                    />
-                </label>
-            </div>
+                <PropertyField
+                    label="No Label"
+                    description="Text for the 'No' button"
+                    {...form.register("noLabel")}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                />
+            </PropertySection>
+
+            <PropertySection title="Validation" icon={<LuSettings className="w-3.5 h-3.5" />}>
+                <PropertyToggle
+                    label="Required"
+                    description="Users must select an option to submit"
+                    {...form.register("required")}
+                />
+            </PropertySection>
         </form>
     );
 }
