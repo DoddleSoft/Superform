@@ -163,14 +163,6 @@ export function ClassicRenderer({
                                     {/* Section Header - only show if showTitle is enabled */}
                                     {section.showTitle && (
                                         <div className="mb-8">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <span 
-                                                    className="text-xs font-bold uppercase tracking-wider"
-                                                    style={{ color: settings.primaryColor, opacity: 0.7 }}
-                                                >
-                                                    Section {sectionIndex + 1}
-                                                </span>
-                                            </div>
                                             <h2 
                                                 className="form-section-title text-2xl md:text-3xl font-bold mb-2"
                                                 style={{ color: settings.textColor }}
