@@ -20,6 +20,7 @@ import {
     LuHistory,
     LuCircleAlert,
     LuPencil,
+    LuSettings,
 } from "react-icons/lu";
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
@@ -34,8 +35,8 @@ export function BuilderHeader({
     lastSavedAt,
     formName,
 }: {
-    activeTab: "build" | "results";
-    onTabChange: (tab: "build" | "results") => void;
+    activeTab: "build" | "settings" | "results";
+    onTabChange: (tab: "build" | "settings" | "results") => void;
     saveStatus: SaveStatus;
     lastSavedAt: Date | null;
     formName?: string;
@@ -156,6 +157,7 @@ export function BuilderHeader({
 
     const tabs = [
         { id: "build", label: "Build", icon: LuPenTool },
+        { id: "settings", label: "Settings", icon: LuSettings },
         { id: "results", label: "Results", icon: LuChartBar },
     ];
 
@@ -249,7 +251,7 @@ export function BuilderHeader({
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => onTabChange(tab.id as "build" | "results")}
+                                    onClick={() => onTabChange(tab.id as "build" | "settings" | "results")}
                                     className={`
                                         flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium
                                         rounded-full transition-all duration-200

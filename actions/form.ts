@@ -595,3 +595,86 @@ export async function unpublishForm(id: string) {
     revalidatePath("/dashboard");
     return data;
 }
+
+// ============== Short Code / Custom URL Operations ==============
+
+/**
+ * Check if a short code (custom URL) is available
+ * @param shortCode - The short code to check
+ * @param currentFormId - The current form's ID (to exclude from check)
+ * @returns Object with availability status
+ */
+export async function checkShortCodeAvailability(
+    shortCode: string,
+    currentFormId: string
+): Promise<{ available: boolean }> {
+    const supabase = await createSupabaseServerClient();
+    
+    // Validate format
+    if (shortCode.length < 4 || shortCode.length > 24) {
+        return { available: false };
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(shortCode)) {
+        return { available: false };
+    }
+
+    // Check if any other form has this short code
+    const { data, error } = await supabase
+        .from("forms")
+        .select("id")
+        .eq("short_code", shortCode)
+        .neq("id", currentFormId)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error checking short code availability:", error);
+        throw new Error("Failed to check availability");
+    }
+
+    return { available: data === null };
+}
+
+/**
+ * Update a form's short code (custom URL)
+ * @param formId - The form's ID
+ * @param shortCode - The new short code
+ */
+export async function updateFormShortCode(
+    formId: string,
+    shortCode: string
+): Promise<{ success: boolean; shortCode: string }> {
+    const supabase = await createSupabaseServerClient();
+    
+    // Validate format
+    if (shortCode.length < 4 || shortCode.length > 24) {
+        throw new Error("Short code must be 4-24 characters");
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(shortCode)) {
+        throw new Error("Short code can only contain letters, numbers, hyphens, and underscores");
+    }
+
+    // Check availability first
+    const { available } = await checkShortCodeAvailability(shortCode, formId);
+    if (!available) {
+        throw new Error("This URL is already taken");
+    }
+
+    // Update the short code
+    const { data, error } = await supabase
+        .from("forms")
+        .update({ short_code: shortCode })
+        .eq("id", formId)
+        .select("short_code")
+        .single();
+
+    if (error) {
+        console.error("Error updating short code:", error);
+        if (error.code === "23505") {
+            throw new Error("This URL is already taken");
+        }
+        throw new Error("Failed to update URL");
+    }
+
+    revalidatePath(`/builder/${formId}`);
+    return { success: true, shortCode: data.short_code };
+}
