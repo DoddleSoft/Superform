@@ -20,6 +20,7 @@ export default async function SubmitPage({
             content={form.content} 
             formId={form.id} 
             style={form.style ?? 'classic'}
+            designSettings={form.designSettings ?? {}}
             version={form.version ?? 1}
         />
     );

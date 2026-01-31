@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
-import type { Form, FormWithStats, PaginatedResponse, GetFormsParams, FormStyle } from "@/types/form-builder";
+import type { Form, FormWithStats, PaginatedResponse, GetFormsParams, FormStyle, FormDesignSettings } from "@/types/form-builder";
 
 // ============== Form CRUD Operations ==============
 
@@ -225,7 +225,7 @@ export async function publishForm(id: string, userId: string) {
     // First get the current form to access content and compare with published
     const { data: currentForm, error: fetchError } = await supabase
         .from("forms")
-        .select("content, style, name, description, current_version, published_content, published_style")
+        .select("content, style, design_settings, name, description, current_version, published_content, published_style, published_design_settings")
         .eq("id", id)
         .single();
 
@@ -235,7 +235,8 @@ export async function publishForm(id: string, userId: string) {
 
     // Check if content has actually changed from published version
     const contentChanged = JSON.stringify(currentForm.content) !== JSON.stringify(currentForm.published_content)
-        || currentForm.style !== currentForm.published_style;
+        || currentForm.style !== currentForm.published_style
+        || JSON.stringify(currentForm.design_settings) !== JSON.stringify(currentForm.published_design_settings);
     
     const now = new Date().toISOString();
     
@@ -251,6 +252,7 @@ export async function publishForm(id: string, userId: string) {
             published: true,
             published_content: currentForm.content,
             published_style: currentForm.style,
+            published_design_settings: currentForm.design_settings,
             published_at: now,
             current_version: newVersion,
             has_unpublished_changes: false,
@@ -272,6 +274,7 @@ export async function publishForm(id: string, userId: string) {
                 version: newVersion,
                 content: currentForm.content,
                 style: currentForm.style || 'classic',
+                design_settings: currentForm.design_settings || {},
                 name: currentForm.name,
                 description: currentForm.description,
                 created_by: userId,
@@ -305,7 +308,7 @@ export async function getFormContentByUrl(formUrl: string) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
         .from("forms")
-        .select("id, published_content, name, description, published_style, current_version") // Use published content for public view
+        .select("id, published_content, name, description, published_style, published_design_settings, current_version") // Use published content for public view
         .eq("share_url", formUrl)
         .eq("published", true)
         .single();
@@ -321,6 +324,7 @@ export async function getFormContentByUrl(formUrl: string) {
         name: data.name,
         description: data.description,
         style: data.published_style,
+        designSettings: data.published_design_settings,
         version: data.current_version,
     };
 }
@@ -470,6 +474,23 @@ export async function saveFormStyle(id: string, style: FormStyle) {
     }
 }
 
+// ============== Form Design Settings Operations ==============
+
+export async function saveFormDesignSettings(id: string, designSettings: FormDesignSettings) {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase
+        .from("forms")
+        .update({ 
+            design_settings: designSettings,
+            has_unpublished_changes: true, // Mark as having unpublished changes
+        })
+        .eq("id", id);
+
+    if (error) {
+        throw error;
+    }
+}
+
 // ============== Form Version Operations ==============
 
 export async function getFormVersions(formId: string) {
@@ -493,7 +514,7 @@ export async function restoreFormVersion(formId: string, version: number) {
     // Get the version to restore
     const { data: versionData, error: fetchError } = await supabase
         .from("form_versions")
-        .select("content, style")
+        .select("content, style, design_settings")
         .eq("form_id", formId)
         .eq("version", version)
         .single();
@@ -508,6 +529,7 @@ export async function restoreFormVersion(formId: string, version: number) {
         .update({
             content: versionData.content,
             style: versionData.style,
+            design_settings: versionData.design_settings || {},
             has_unpublished_changes: true, // Will need to republish
         })
         .eq("id", formId)

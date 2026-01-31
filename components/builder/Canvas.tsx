@@ -49,6 +49,7 @@ export function Canvas() {
         canvasTab,
         setCanvasTab,
         formStyle,
+        designSettings,
     } = useFormBuilder();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -182,6 +183,7 @@ export function Canvas() {
                     <FormPreview
                         sections={sections}
                         formStyle={formStyle}
+                        designSettings={designSettings}
                         previewDevice={previewDevice}
                         setPreviewDevice={setPreviewDevice}
                     />
@@ -468,16 +470,17 @@ function SortableElement({ element, sectionId }: { element: FormElementInstance;
 }
 
 // Form Preview Component for Design Tab
-import { FormStyle } from "@/types/form-builder";
+import { FormStyle, FormDesignSettings } from "@/types/form-builder";
 
 interface FormPreviewProps {
     sections: FormSection[];
     formStyle: FormStyle;
+    designSettings: FormDesignSettings;
     previewDevice: DeviceType;
     setPreviewDevice: (device: DeviceType) => void;
 }
 
-function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: FormPreviewProps) {
+function FormPreview({ sections, formStyle, designSettings, previewDevice, setPreviewDevice }: FormPreviewProps) {
     const [previewSection, setPreviewSection] = useState(0);
     const deviceConfig = DEVICE_SIZES.find(d => d.id === previewDevice) || DEVICE_SIZES[2];
 
@@ -540,6 +543,7 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
                                 handleSubmit={() => { }}
                                 validateAllSections={() => true}
                                 setRenderKey={() => { }}
+                                designSettings={designSettings}
                             />
                         </div>
                     ) : (
@@ -558,6 +562,7 @@ function FormPreview({ sections, formStyle, previewDevice, setPreviewDevice }: F
                                 sections[previewSection] ? previewSection : 0
                             }
                             onSectionChange={setPreviewSection}
+                            designSettings={designSettings}
                         />
                     )}
                 </div>

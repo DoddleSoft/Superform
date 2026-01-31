@@ -110,7 +110,7 @@ function FormComponent({
                 {required && <span className="text-error ml-1">*</span>}
             </label>
             <textarea
-                className={`form-field-input w-full bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 resize-none ${error ? "border-error" : ""}`}
+                className={`form-field-input w-full bg-transparent border border-[#262627]/30 rounded-lg text-2xl md:text-3xl p-4 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 resize-none ${error ? "border-error" : ""}`}
                 placeholder={placeholder}
                 rows={rows}
                 onChange={(e) => {

@@ -11,11 +11,14 @@ import {
     LuType, 
     LuTrash2,
     LuFileText,
-    LuToggleLeft
+    LuToggleLeft,
+    LuPalette,
+    LuMousePointer2,
+    LuLayoutGrid
 } from "react-icons/lu";
 import { motion, AnimatePresence, scaleIn } from "@/lib/animations";
-import { FormSection, FormStyle, FormElementType } from "@/types/form-builder";
-import { saveFormStyle } from "@/actions/form";
+import { FormSection, FormStyle, FormElementType, FormDesignSettings, FormFontFamily, ButtonCornerRadius, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { saveFormStyle, saveFormDesignSettings } from "@/actions/form";
 import {
     DndContext,
     DragEndEvent,
@@ -33,22 +36,50 @@ import {
     arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PropertySection, PropertyField, PropertyTextarea } from "./properties";
+import { PropertySection, PropertyField, PropertyTextarea, PropertySelect, PropertyColorPicker, PropertyToggle } from "./properties";
+import { useCallback, useRef } from "react";
 
 // Form style options with labels and descriptions
-const FORM_STYLE_OPTIONS: { value: FormStyle; label: string; description: string; icon: React.ReactNode }[] = [
+const FORM_STYLE_OPTIONS: { value: FormStyle; label: string; description: string }[] = [
     { 
         value: 'classic', 
         label: 'Classic', 
         description: 'All sections visible on one scrollable page',
-        icon: <LuFileText className="w-5 h-5" />,
     },
     { 
         value: 'typeform', 
         label: 'Typeform', 
         description: 'Step-by-step with slide animations',
-        icon: <LuToggleLeft className="w-5 h-5" />,
     },
+];
+
+// Font family options
+const FONT_FAMILY_OPTIONS: { value: FormFontFamily; label: string }[] = [
+    { value: 'system', label: 'System Default' },
+    { value: 'inter', label: 'Inter' },
+    { value: 'roboto', label: 'Roboto' },
+    { value: 'poppins', label: 'Poppins' },
+    { value: 'open-sans', label: 'Open Sans' },
+    { value: 'lato', label: 'Lato' },
+    { value: 'montserrat', label: 'Montserrat' },
+    { value: 'playfair', label: 'Playfair Display' },
+    { value: 'merriweather', label: 'Merriweather' },
+];
+
+// Button corner radius options
+const BUTTON_RADIUS_OPTIONS: { value: ButtonCornerRadius; label: string }[] = [
+    { value: 'none', label: 'None (Square)' },
+    { value: 'sm', label: 'Small' },
+    { value: 'md', label: 'Medium' },
+    { value: 'lg', label: 'Large' },
+    { value: 'full', label: 'Full (Pill)' },
+];
+
+// Question spacing options
+const QUESTION_SPACING_OPTIONS: { value: FormDesignSettings['questionSpacing']; label: string }[] = [
+    { value: 'compact', label: 'Compact' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'relaxed', label: 'Relaxed' },
 ];
 
 // Element type icons for the header
@@ -70,6 +101,8 @@ export function PropertiesPanel() {
         canvasTab,
         formStyle,
         setFormStyle,
+        designSettings,
+        updateDesignSetting,
         formId,
     } = useFormBuilder();
 
@@ -85,6 +118,9 @@ export function PropertiesPanel() {
 
     const elementSectionId = selectedElement ? findElementSection() : null;
 
+    // Debounce timer ref for design settings
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Handle style change
     const handleStyleChange = async (newStyle: FormStyle) => {
         setFormStyle(newStyle);
@@ -96,6 +132,30 @@ export function PropertiesPanel() {
             }
         }
     };
+
+    // Handle design setting change with debounce
+    const handleDesignSettingChange = useCallback(<K extends keyof FormDesignSettings>(
+        key: K, 
+        value: FormDesignSettings[K]
+    ) => {
+        updateDesignSetting(key, value);
+        
+        // Debounce save to prevent too many API calls
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        
+        saveTimeoutRef.current = setTimeout(async () => {
+            if (formId) {
+                try {
+                    const updatedSettings = { ...designSettings, [key]: value };
+                    await saveFormDesignSettings(formId, updatedSettings);
+                } catch (error) {
+                    console.error("Failed to save design settings:", error);
+                }
+            }
+        }, 500);
+    }, [formId, designSettings, updateDesignSetting]);
 
     return (
         <motion.aside
@@ -109,7 +169,9 @@ export function PropertiesPanel() {
                 {canvasTab === 'design' ? (
                     <DesignSettingsView 
                         formStyle={formStyle} 
-                        onStyleChange={handleStyleChange} 
+                        onStyleChange={handleStyleChange}
+                        designSettings={designSettings}
+                        onDesignSettingChange={handleDesignSettingChange}
                     />
                 ) : selectedElement ? (
                     // Element Properties View
@@ -267,10 +329,14 @@ function SectionPropertiesView({
 // Design Settings View - shown when Design tab is active
 function DesignSettingsView({ 
     formStyle, 
-    onStyleChange 
+    onStyleChange,
+    designSettings,
+    onDesignSettingChange,
 }: { 
     formStyle: FormStyle; 
     onStyleChange: (style: FormStyle) => void;
+    designSettings: FormDesignSettings;
+    onDesignSettingChange: <K extends keyof FormDesignSettings>(key: K, value: FormDesignSettings[K]) => void;
 }) {
     return (
         <motion.div
@@ -300,64 +366,108 @@ function DesignSettingsView({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
-                <PropertySection title="Layout Style" icon={<LuLayers className="w-3.5 h-3.5" />} defaultOpen={true}>
-                    <p className="text-xs text-base-content/60 -mt-1 mb-3">
-                        Choose how your form is presented to respondents
-                    </p>
-                    
-                    <div className="space-y-2">
-                        {FORM_STYLE_OPTIONS.map((option) => (
-                            <label
-                                key={option.value}
-                                className={`
-                                    flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
-                                    ${formStyle === option.value 
-                                        ? 'border-primary bg-primary/5 shadow-sm' 
-                                        : 'border-base-200 hover:border-base-300 hover:bg-base-100'
-                                    }
-                                `}
-                            >
-                                <div className={`
-                                    w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
-                                    ${formStyle === option.value 
-                                        ? 'bg-primary text-primary-content' 
-                                        : 'bg-base-200 text-base-content/50'
-                                    }
-                                `}>
-                                    {option.icon}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium text-sm">{option.label}</span>
-                                        {formStyle === option.value && (
-                                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide bg-primary text-primary-content rounded">
-                                                Active
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-base-content/60 mt-0.5">
-                                        {option.description}
-                                    </p>
-                                </div>
-                                <input
-                                    type="radio"
-                                    name="formStyle"
-                                    value={option.value}
-                                    checked={formStyle === option.value}
-                                    onChange={() => onStyleChange(option.value)}
-                                    className="radio radio-primary radio-sm mt-1"
-                                />
-                            </label>
-                        ))}
-                    </div>
+                {/* Layout Section */}
+                <PropertySection title="Layout" icon={<LuLayoutGrid className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertySelect
+                        label="Form Layout Style"
+                        description="How your form is presented to respondents"
+                        value={formStyle}
+                        onChange={(e) => onStyleChange(e.target.value as FormStyle)}
+                        options={FORM_STYLE_OPTIONS}
+                    />
+
+                    <PropertySelect
+                        label="Question Spacing"
+                        description="Space between form questions"
+                        value={designSettings.questionSpacing}
+                        onChange={(e) => onDesignSettingChange('questionSpacing', e.target.value as FormDesignSettings['questionSpacing'])}
+                        options={QUESTION_SPACING_OPTIONS}
+                    />
+
+                    {formStyle === 'classic' && (
+                        <PropertyToggle
+                            label="Show Sections"
+                            description="Display section cards with headers. When off, shows all fields in a flat layout."
+                            checked={designSettings.showSections}
+                            onChange={(e) => onDesignSettingChange('showSections', e.target.checked)}
+                        />
+                    )}
                 </PropertySection>
 
+                {/* Colors Section */}
+                <PropertySection title="Colors" icon={<LuPalette className="w-3.5 h-3.5" />} defaultOpen={true}>
+                    <PropertyColorPicker
+                        label="Background Color"
+                        description="Form page background"
+                        value={designSettings.backgroundColor}
+                        onChange={(value) => onDesignSettingChange('backgroundColor', value)}
+                    />
+                    
+                    <PropertyColorPicker
+                        label="Primary Color"
+                        description="Used for focus states and highlights"
+                        value={designSettings.primaryColor}
+                        onChange={(value) => onDesignSettingChange('primaryColor', value)}
+                    />
+
+                    <PropertyColorPicker
+                        label="Text Color"
+                        description="Main text and labels"
+                        value={designSettings.textColor}
+                        onChange={(value) => onDesignSettingChange('textColor', value)}
+                    />
+                </PropertySection>
+
+                {/* Typography Section */}
+                <PropertySection title="Typography" icon={<LuType className="w-3.5 h-3.5" />} defaultOpen={false}>
+                    <PropertySelect
+                        label="Font Family"
+                        description="Primary font for the form"
+                        value={designSettings.fontFamily}
+                        onChange={(e) => onDesignSettingChange('fontFamily', e.target.value as FormFontFamily)}
+                        options={FONT_FAMILY_OPTIONS}
+                    />
+                </PropertySection>
+
+                {/* Buttons Section */}
+                <PropertySection title="Buttons" icon={<LuMousePointer2 className="w-3.5 h-3.5" />} defaultOpen={false}>
+                    <PropertyColorPicker
+                        label="Button Color"
+                        description="Background color for buttons"
+                        value={designSettings.buttonColor}
+                        onChange={(value) => onDesignSettingChange('buttonColor', value)}
+                    />
+
+                    <PropertyColorPicker
+                        label="Button Text Color"
+                        description="Text color on buttons"
+                        value={designSettings.buttonTextColor}
+                        onChange={(value) => onDesignSettingChange('buttonTextColor', value)}
+                    />
+
+                    <PropertySelect
+                        label="Button Corner Radius"
+                        description="How rounded the button corners are"
+                        value={designSettings.buttonCornerRadius}
+                        onChange={(e) => onDesignSettingChange('buttonCornerRadius', e.target.value as ButtonCornerRadius)}
+                        options={BUTTON_RADIUS_OPTIONS}
+                    />
+                </PropertySection>
+
+                {/* Reset to Defaults */}
                 <div className="px-4 py-3">
-                    <div className="p-3 bg-base-200/50 rounded-lg border border-base-200">
-                        <p className="text-xs text-base-content/60">
-                            <strong className="font-medium">Coming soon:</strong> Custom colors, fonts, themes, and branding options.
-                        </p>
-                    </div>
+                    <button
+                        type="button"
+                        className="btn btn-ghost btn-sm w-full text-base-content/60 hover:text-base-content"
+                        onClick={() => {
+                            // Reset all design settings to defaults
+                            Object.entries(DEFAULT_DESIGN_SETTINGS).forEach(([key, value]) => {
+                                onDesignSettingChange(key as keyof FormDesignSettings, value);
+                            });
+                        }}
+                    >
+                        Reset to Defaults
+                    </button>
                 </div>
             </div>
         </motion.div>

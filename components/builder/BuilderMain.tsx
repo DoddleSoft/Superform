@@ -14,7 +14,7 @@ import { LeftPanel } from "./LeftPanel";
 import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
-import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 import { FormSubmission } from "@/types/submission";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -65,6 +65,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 form.published,
                 form.share_url,
                 form.style || 'classic',
+                form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
                 {
                     currentVersion: form.current_version || 1,
                     hasUnpublishedChanges: form.has_unpublished_changes || false,

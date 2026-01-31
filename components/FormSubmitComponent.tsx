@@ -1,6 +1,6 @@
 "use client";
 
-import { FormElementInstance, FormSection, FormContent, FormStyle } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, FormStyle, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 import { FormElements } from "@/components/builder/FormElements";
 import { useRef, useState, useTransition, useCallback, useEffect, useMemo } from "react";
 import { submitForm, savePartialSubmission } from "@/actions/form";
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck } from "react-icons/lu";
 import { ClassicRenderer } from "./renderers/ClassicRenderer";
 import { TypeformRenderer } from "./renderers/TypeformRenderer";
+import { getButtonStyle, FONT_FAMILY_MAP } from "@/lib/designUtils";
 
 // Generate a unique session ID for this form submission attempt
 function generateSessionId(): string {
@@ -19,6 +20,7 @@ interface FormSubmitComponentProps {
     formId: string;
     content: FormContent; // Now expects Section[] format
     style?: FormStyle; // Form display style
+    designSettings?: Partial<FormDesignSettings>; // Design settings
     version?: number; // Form version for tracking
 }
 
@@ -27,8 +29,10 @@ export function FormSubmitComponent({
     formId,
     content,
     style = 'classic', // Default to classic style
+    designSettings = {},
     version = 1, // Default version
 }: FormSubmitComponentProps) {
+    const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
     const formValues = useRef<{ [key: string]: string }>({});
     const formErrors = useRef<{ [key: string]: boolean }>({});
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -241,17 +245,27 @@ export function FormSubmitComponent({
 
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-200 to-base-300 p-4">
+            <div 
+                className="min-h-screen flex items-center justify-center p-4"
+                style={{ 
+                    backgroundColor: settings.backgroundColor,
+                    fontFamily: FONT_FAMILY_MAP[settings.fontFamily],
+                }}
+            >
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="max-w-md w-full bg-base-100 rounded-2xl shadow-xl p-8 text-center"
+                    className="max-w-md w-full rounded-2xl shadow-xl p-8 text-center"
+                    style={{ backgroundColor: 'white' }}
                 >
-                    <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <LuCheck className="w-8 h-8 text-success" />
+                    <div 
+                        className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                        style={{ backgroundColor: `${settings.primaryColor}20` }}
+                    >
+                        <LuCheck className="w-8 h-8" style={{ color: settings.primaryColor }} />
                     </div>
-                    <h1 className="text-2xl font-bold mb-2">Thank You!</h1>
-                    <p className="text-base-content/60">
+                    <h1 className="text-2xl font-bold mb-2" style={{ color: settings.textColor }}>Thank You!</h1>
+                    <p style={{ color: settings.textColor, opacity: 0.6 }}>
                         Your response has been submitted successfully. You can close this page now.
                     </p>
                 </motion.div>
@@ -261,10 +275,16 @@ export function FormSubmitComponent({
 
     if (sections.length === 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-200 to-base-300 p-4">
+            <div 
+                className="min-h-screen flex items-center justify-center p-4"
+                style={{ 
+                    backgroundColor: settings.backgroundColor,
+                    fontFamily: FONT_FAMILY_MAP[settings.fontFamily],
+                }}
+            >
                 <div className="text-center">
-                    <h1 className="text-xl font-bold mb-2">This form is empty</h1>
-                    <p className="text-base-content/60">No questions have been added yet.</p>
+                    <h1 className="text-xl font-bold mb-2" style={{ color: settings.textColor }}>This form is empty</h1>
+                    <p style={{ color: settings.textColor, opacity: 0.6 }}>No questions have been added yet.</p>
                 </div>
             </div>
         );
@@ -283,6 +303,7 @@ export function FormSubmitComponent({
                 handleSubmit={handleSubmit}
                 validateAllSections={validateAllSections}
                 setRenderKey={setRenderKey}
+                designSettings={settings}
             />
         );
     }
@@ -299,6 +320,7 @@ export function FormSubmitComponent({
             handleSubmit={handleSubmit}
             validateSection={validateCurrentSection}
             setRenderKey={setRenderKey}
+            designSettings={settings}
         />
     );
 }

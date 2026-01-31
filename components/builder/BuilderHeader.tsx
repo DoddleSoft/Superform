@@ -25,6 +25,7 @@ import {
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
 import { VersionHistoryModal } from "./VersionHistoryModal";
+import { DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 
 type TabType = "build" | "integrate" | "settings" | "share" | "results";
 
@@ -58,6 +59,7 @@ export function BuilderHeader({
                         result.published, 
                         result.share_url,
                         result.style,
+                        result.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...result.design_settings } : DEFAULT_DESIGN_SETTINGS,
                         {
                             currentVersion: result.current_version,
                             hasUnpublishedChanges: result.has_unpublished_changes,

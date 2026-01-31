@@ -5,3 +5,4 @@ export * from "./PropertyToggle";
 export * from "./PropertyTextarea";
 export * from "./PropertySelect";
 export * from "./PropertyOptionsEditor";
+export * from "./PropertyColorPicker";

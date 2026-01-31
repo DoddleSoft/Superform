@@ -1,10 +1,11 @@
 "use client";
 
 import { FormElements } from "@/components/builder/FormElements";
-import { FormElementInstance, FormSection } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck, LuArrowDown, LuChevronDown } from "react-icons/lu";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { getFormWrapperStyle, getButtonStyle, QUESTION_SPACING_MAP, getGoogleFontsUrl, FONT_FAMILY_MAP } from "@/lib/designUtils";
 
 interface TypeformRendererProps {
     sections: FormSection[];
@@ -19,6 +20,7 @@ interface TypeformRendererProps {
     // Optional props for controlled mode (preview)
     currentSectionIndex?: number;
     onSectionChange?: (index: number) => void;
+    designSettings?: Partial<FormDesignSettings>;
 }
 
 export function TypeformRenderer({
@@ -33,7 +35,27 @@ export function TypeformRenderer({
     setRenderKey,
     currentSectionIndex: controlledIndex,
     onSectionChange,
+    designSettings = {},
 }: TypeformRendererProps) {
+    const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
+    const buttonStyle = getButtonStyle(settings);
+    const questionSpacing = QUESTION_SPACING_MAP[settings.questionSpacing];
+
+    // Load Google Font if needed
+    useEffect(() => {
+        const fontUrl = getGoogleFontsUrl(settings.fontFamily);
+        if (fontUrl) {
+            const linkId = `google-font-${settings.fontFamily}`;
+            if (!document.getElementById(linkId)) {
+                const link = document.createElement('link');
+                link.id = linkId;
+                link.href = fontUrl;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+        }
+    }, [settings.fontFamily]);
+
     const [internalIndex, setInternalIndex] = useState(0);
     const [direction, setDirection] = useState(0);
     const [showScrollIndicator, setShowScrollIndicator] = useState(false);
@@ -167,12 +189,20 @@ export function TypeformRenderer({
     if (!currentSection) return null;
 
     return (
-        <div className="absolute inset-0 bg-[#fafafa] text-[#262627] flex flex-col font-sans overflow-hidden">
+        <div 
+            className="absolute inset-0 flex flex-col overflow-hidden"
+            style={{ 
+                backgroundColor: settings.backgroundColor,
+                color: settings.textColor,
+                fontFamily: FONT_FAMILY_MAP[settings.fontFamily],
+            }}
+        >
             {/* Progress Bar */}
             <div className="absolute top-0 left-0 right-0 z-50">
-                <div className="h-1 bg-gray-200">
+                <div className="h-1" style={{ backgroundColor: `${settings.primaryColor}20` }}>
                     <motion.div
-                        className="h-full bg-[#0445AF]"
+                        className="h-full"
+                        style={{ backgroundColor: settings.primaryColor }}
                         initial={{ width: 0 }}
                         animate={{ width: `${((currentSectionIndex + 1) / totalSections) * 100}%` }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -186,7 +216,7 @@ export function TypeformRenderer({
                 className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth typeform-scroll"
                 style={{
                     scrollbarWidth: "thin",
-                    scrollbarColor: "rgba(4, 69, 175, 0.3) transparent",
+                    scrollbarColor: `${settings.primaryColor}50 transparent`,
                 }}
             >
                 <div className="min-h-full flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-8 md:px-12 py-16 relative z-10">
@@ -203,26 +233,39 @@ export function TypeformRenderer({
                         >
                             {/* Section Question / Header */}
                             <div>
-                                <h1 className="form-section-title text-3xl md:text-4xl lg:text-5xl font-light text-[#262627] leading-tight mb-4">
+                                <h1 
+                                    className="form-section-title text-3xl md:text-4xl lg:text-5xl font-light leading-tight mb-4"
+                                    style={{ color: settings.textColor }}
+                                >
                                     {currentSection.title}
                                 </h1>
 
                                 {currentSection.description && (
-                                    <p className="form-section-description text-xl md:text-2xl font-light text-[#262627]/70 mt-2 pl-24 md:pl-0">
+                                    <p 
+                                        className="form-section-description text-xl md:text-2xl font-light mt-2 pl-24 md:pl-0"
+                                        style={{ color: settings.textColor, opacity: 0.7 }}
+                                    >
                                         {currentSection.description}
                                     </p>
                                 )}
                             </div>
 
                             {/* Form Fields Area */}
-                            <div key={renderKey} className="space-y-8 w-full">
+                            <div key={renderKey} style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }} className="w-full">
                                 {currentSection.elements.map((element) => {
                                     const FormElementDesc = FormElements[element.type];
                                     if (!FormElementDesc) return null;
 
                                     const FormElement = FormElementDesc.formComponent;
                                     return (
-                                        <div key={element.id} className="w-full group">
+                                        <div 
+                                            key={element.id} 
+                                            className="w-full group"
+                                            style={{ 
+                                                '--form-primary-color': settings.primaryColor,
+                                                '--form-text-color': settings.textColor,
+                                            } as React.CSSProperties}
+                                        >
                                             {/* We might pass a special prop here in future for Typeform-specific styling if we modify the components directly */}
                                             <FormElement
                                                 element={element}
@@ -240,14 +283,18 @@ export function TypeformRenderer({
                                 <button
                                     onClick={handleNext}
                                     disabled={pending}
-                                    className="inline-flex items-center gap-2 bg-[#0445AF] hover:bg-[#03368a] text-white px-8 py-3 rounded text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/10"
+                                    className="inline-flex items-center gap-2 px-8 py-3 text-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                                    style={buttonStyle}
                                 >
                                     {isLastSection ? (pending ? "Submitting..." : "Submit") : "OK"}
                                     {isLastSection ? <LuCheck className="w-6 h-6" /> : <LuCheck className="w-6 h-6" />}
                                 </button>
 
-                                <div className="inline-flex items-center gap-2 ml-4 text-xs font-medium text-[#262627]/50 uppercase tracking-widest hidden md:inline-flex">
-                                    press <span className="font-bold border-b border-[#262627]/30 pb-0.5">Enter ↵</span>
+                                <div 
+                                    className="inline-flex items-center gap-2 ml-4 text-xs font-medium uppercase tracking-widest hidden md:inline-flex"
+                                    style={{ color: settings.textColor, opacity: 0.5 }}
+                                >
+                                    press <span className="font-bold border-b pb-0.5" style={{ borderColor: `${settings.textColor}30` }}>Enter ↵</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -267,7 +314,8 @@ export function TypeformRenderer({
                     >
                         <button
                             onClick={scrollDown}
-                            className="flex flex-col items-center gap-1 text-[#0445AF]/70 hover:text-[#0445AF] transition-colors group"
+                            className="flex flex-col items-center gap-1 transition-colors group"
+                            style={{ color: settings.primaryColor, opacity: 0.7 }}
                         >
                             <span className="text-xs font-medium uppercase tracking-wider opacity-70 group-hover:opacity-100">
                                 Scroll for more
@@ -285,7 +333,10 @@ export function TypeformRenderer({
 
             {/* Navigation Buttons (Bottom Right) */}
             <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">
-                <div className="flex rounded-md shadow-sm overflow-hidden bg-[#0445AF] text-white">
+                <div 
+                    className="flex rounded-md shadow-sm overflow-hidden"
+                    style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}
+                >
                     <button
                         onClick={handlePrevious}
                         disabled={isFirstSection}
@@ -303,7 +354,10 @@ export function TypeformRenderer({
                 </div>
             </div>
 
-            <div className="absolute bottom-4 right-8 z-20 text-[10px] text-[#262627]/30 hidden md:block">
+            <div 
+                className="absolute bottom-4 right-8 z-20 text-[10px] hidden md:block"
+                style={{ color: settings.textColor, opacity: 0.3 }}
+            >
                 Powered by Superform
             </div>
         </div>

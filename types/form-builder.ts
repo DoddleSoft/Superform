@@ -20,6 +20,56 @@ export enum FormElementType {
 // 'typeform' - Typeform-like step-by-step experience with slide animations
 export type FormStyle = 'classic' | 'typeform';
 
+// Font family options for forms
+export type FormFontFamily = 
+    | 'system' 
+    | 'inter' 
+    | 'roboto' 
+    | 'poppins' 
+    | 'open-sans' 
+    | 'lato' 
+    | 'montserrat'
+    | 'playfair'
+    | 'merriweather';
+
+// Button corner radius options
+export type ButtonCornerRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';
+
+// Global design settings for forms
+export interface FormDesignSettings {
+    // Colors
+    backgroundColor: string;
+    primaryColor: string;
+    textColor: string;
+    buttonColor: string;
+    buttonTextColor: string;
+    
+    // Typography
+    fontFamily: FormFontFamily;
+    
+    // Button styling
+    buttonCornerRadius: ButtonCornerRadius;
+    
+    // Layout
+    questionSpacing: 'compact' | 'normal' | 'relaxed';
+    
+    // Classic layout specific
+    showSections: boolean; // If false, shows all fields in a single page without section cards
+}
+
+// Default design settings
+export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
+    backgroundColor: '#ffffff',
+    primaryColor: '#6366f1',
+    textColor: '#1f2937',
+    buttonColor: '#6366f1',
+    buttonTextColor: '#ffffff',
+    fontFamily: 'system',
+    buttonCornerRadius: 'md',
+    questionSpacing: 'normal',
+    showSections: true,
+};
+
 // Canvas tabs in builder
 export type CanvasTab = 'form' | 'design' | 'logic';
 
@@ -74,6 +124,7 @@ export interface Form {
     content: FormContent; // Draft content (auto-saved)
     published: boolean;
     style: FormStyle; // Draft style
+    design_settings: FormDesignSettings; // Draft design settings
     share_url: string | null;
     created_at: string;
     updated_at: string;
@@ -81,6 +132,7 @@ export interface Form {
     // Versioning fields
     published_content: FormContent | null; // Content shown to end users
     published_style: FormStyle | null; // Style used for published form
+    published_design_settings: FormDesignSettings | null; // Design settings for published form
     published_at: string | null; // When last published
     current_version: number; // Current published version (0 = never published)
     has_unpublished_changes: boolean; // True if draft differs from published
@@ -93,6 +145,7 @@ export interface FormVersion {
     version: number;
     content: FormContent;
     style: FormStyle;
+    design_settings: FormDesignSettings;
     name: string;
     description: string | null;
     created_at: string;

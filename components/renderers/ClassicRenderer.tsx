@@ -1,9 +1,11 @@
 "use client";
 
 import { FormElements } from "@/components/builder/FormElements";
-import { FormElementInstance, FormSection } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 import { motion } from "framer-motion";
 import { LuCheck } from "react-icons/lu";
+import { getFormWrapperStyle, getButtonStyle, QUESTION_SPACING_MAP, getGoogleFontsUrl } from "@/lib/designUtils";
+import { useEffect } from "react";
 
 interface ClassicRendererProps {
     sections: FormSection[];
@@ -15,6 +17,7 @@ interface ClassicRendererProps {
     handleSubmit: () => void;
     validateAllSections: () => boolean;
     setRenderKey: (key: number) => void;
+    designSettings?: Partial<FormDesignSettings>;
 }
 
 export function ClassicRenderer({
@@ -27,7 +30,28 @@ export function ClassicRenderer({
     handleSubmit,
     validateAllSections,
     setRenderKey,
+    designSettings = {},
 }: ClassicRendererProps) {
+    const settings = { ...DEFAULT_DESIGN_SETTINGS, ...designSettings };
+    const wrapperStyle = getFormWrapperStyle(settings);
+    const buttonStyle = getButtonStyle(settings);
+    const questionSpacing = QUESTION_SPACING_MAP[settings.questionSpacing];
+
+    // Load Google Font if needed
+    useEffect(() => {
+        const fontUrl = getGoogleFontsUrl(settings.fontFamily);
+        if (fontUrl) {
+            const linkId = `google-font-${settings.fontFamily}`;
+            if (!document.getElementById(linkId)) {
+                const link = document.createElement('link');
+                link.id = linkId;
+                link.href = fontUrl;
+                link.rel = 'stylesheet';
+                document.head.appendChild(link);
+            }
+        }
+    }, [settings.fontFamily]);
+
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateAllSections()) {
@@ -38,63 +62,117 @@ export function ClassicRenderer({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-base-200 to-base-300 py-8 px-4">
+        <div 
+            className="min-h-screen py-8 px-4"
+            style={wrapperStyle}
+        >
             <div className="max-w-2xl mx-auto">
                 <form onSubmit={onSubmit}>
-                    <div className="space-y-8" key={renderKey}>
-                        {sections.map((section, sectionIndex) => (
-                            <motion.div
-                                key={section.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: sectionIndex * 0.1 }}
-                                className="form-classic-card bg-base-100 rounded-2xl shadow-xl p-8 md:p-12"
-                            >
-                                {/* Section Header */}
-                                <div className="mb-8">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="text-xs font-bold text-primary/60 uppercase tracking-wider">
-                                            Section {sectionIndex + 1}
-                                        </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} key={renderKey}>
+                        {settings.showSections ? (
+                            // Sectioned layout with cards
+                            sections.map((section, sectionIndex) => (
+                                <motion.div
+                                    key={section.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: sectionIndex * 0.1 }}
+                                    className="form-classic-card rounded-2xl shadow-xl p-8 md:p-12"
+                                    style={{ 
+                                        backgroundColor: 'white',
+                                        border: `1px solid ${settings.primaryColor}20`,
+                                    }}
+                                >
+                                    {/* Section Header */}
+                                    <div className="mb-8">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span 
+                                                className="text-xs font-bold uppercase tracking-wider"
+                                                style={{ color: settings.primaryColor, opacity: 0.7 }}
+                                            >
+                                                Section {sectionIndex + 1}
+                                            </span>
+                                        </div>
+                                        <h2 
+                                            className="form-section-title text-2xl md:text-3xl font-bold mb-2"
+                                            style={{ color: settings.textColor }}
+                                        >
+                                            {section.title}
+                                        </h2>
+                                        {section.description && (
+                                            <p 
+                                                className="form-section-description"
+                                                style={{ color: settings.textColor, opacity: 0.6 }}
+                                            >
+                                                {section.description}
+                                            </p>
+                                        )}
                                     </div>
-                                    <h2 className="form-section-title text-2xl md:text-3xl font-bold mb-2">
-                                        {section.title}
-                                    </h2>
-                                    {section.description && (
-                                        <p className="form-section-description text-base-content/60">
-                                            {section.description}
-                                        </p>
-                                    )}
-                                </div>
 
-                                {/* Form Fields */}
-                                <div className="space-y-6">
-                                    {section.elements.map((element) => {
-                                        // Handle potential missing element types safely
+                                    {/* Form Fields */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }}>
+                                        {section.elements.map((element) => {
+                                            const FormElementDesc = FormElements[element.type];
+                                            if (!FormElementDesc) return null;
+
+                                            const FormElement = FormElementDesc.formComponent;
+                                            return (
+                                                <div 
+                                                    key={element.id}
+                                                    style={{ 
+                                                        '--form-primary-color': settings.primaryColor,
+                                                        '--form-text-color': settings.textColor,
+                                                    } as React.CSSProperties}
+                                                >
+                                                    <FormElement
+                                                        element={element}
+                                                        submitValue={submitValue}
+                                                        isInvalid={formErrors.current[element.id]}
+                                                        defaultValue={formValues.current[element.id]}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </motion.div>
+                            ))
+                        ) : (
+                            // Flat page layout - all fields directly on the page
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }}>
+                                {sections.flatMap((section) =>
+                                    section.elements.map((element) => {
                                         const FormElementDesc = FormElements[element.type];
                                         if (!FormElementDesc) return null;
 
                                         const FormElement = FormElementDesc.formComponent;
                                         return (
-                                            <FormElement
+                                            <div 
                                                 key={element.id}
-                                                element={element}
-                                                submitValue={submitValue}
-                                                isInvalid={formErrors.current[element.id]}
-                                                defaultValue={formValues.current[element.id]}
-                                            />
+                                                style={{ 
+                                                    '--form-primary-color': settings.primaryColor,
+                                                    '--form-text-color': settings.textColor,
+                                                } as React.CSSProperties}
+                                            >
+                                                <FormElement
+                                                    element={element}
+                                                    submitValue={submitValue}
+                                                    isInvalid={formErrors.current[element.id]}
+                                                    defaultValue={formValues.current[element.id]}
+                                                />
+                                            </div>
                                         );
-                                    })}
-                                </div>
-                            </motion.div>
-                        ))}
+                                    })
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Submit Button */}
                     <div className="mt-8 flex justify-center">
                         <button
                             type="submit"
-                            className="btn btn-primary btn-lg gap-2 px-8"
+                            className="btn btn-lg gap-2 px-8 font-semibold transition-all hover:scale-105 active:scale-95"
+                            style={buttonStyle}
                             disabled={pending}
                         >
                             {pending ? "Submitting..." : "Submit"}

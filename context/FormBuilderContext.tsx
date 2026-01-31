@@ -9,7 +9,7 @@ import {
     SetStateAction,
     useCallback,
 } from "react";
-import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 
 type FormBuilderContextType = {
     // Section management
@@ -39,11 +39,16 @@ type FormBuilderContextType = {
     formId: string | null;
     isPublished: boolean;
     shareUrl: string | null;
-    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle, versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }) => void;
+    setFormMetadata: (id: string, published: boolean, shareUrl: string | null, style?: FormStyle, designSettings?: FormDesignSettings, versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }) => void;
     
     // Form Style
     formStyle: FormStyle;
     setFormStyle: Dispatch<SetStateAction<FormStyle>>;
+    
+    // Design Settings
+    designSettings: FormDesignSettings;
+    setDesignSettings: Dispatch<SetStateAction<FormDesignSettings>>;
+    updateDesignSetting: <K extends keyof FormDesignSettings>(key: K, value: FormDesignSettings[K]) => void;
     
     // Canvas Tab (form | design | logic)
     canvasTab: CanvasTab;
@@ -74,6 +79,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const [isPublished, setIsPublished] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [formStyle, setFormStyle] = useState<FormStyle>('classic');
+    const [designSettings, setDesignSettings] = useState<FormDesignSettings>(DEFAULT_DESIGN_SETTINGS);
     const [canvasTab, setCanvasTab] = useState<CanvasTab>('form');
     
     // Versioning state
@@ -86,6 +92,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         published: boolean, 
         url: string | null, 
         style?: FormStyle,
+        designSettingsData?: FormDesignSettings,
         versionInfo?: { currentVersion: number; hasUnpublishedChanges: boolean; publishedAt: string | null }
     ) => {
         setFormId(id);
@@ -94,11 +101,22 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         if (style) {
             setFormStyle(style);
         }
+        if (designSettingsData) {
+            setDesignSettings({ ...DEFAULT_DESIGN_SETTINGS, ...designSettingsData });
+        }
         if (versionInfo) {
             setCurrentVersion(versionInfo.currentVersion);
             setHasUnpublishedChanges(versionInfo.hasUnpublishedChanges);
             setPublishedAt(versionInfo.publishedAt);
         }
+    }, []);
+
+    // Helper to update a single design setting
+    const updateDesignSetting = useCallback(<K extends keyof FormDesignSettings>(
+        key: K, 
+        value: FormDesignSettings[K]
+    ) => {
+        setDesignSettings(prev => ({ ...prev, [key]: value }));
     }, []);
 
     const setVersionInfo = useCallback((version: number, hasChanges: boolean, pubAt: string | null) => {
@@ -283,6 +301,9 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 setFormMetadata,
                 formStyle,
                 setFormStyle,
+                designSettings,
+                setDesignSettings,
+                updateDesignSetting,
                 canvasTab,
                 setCanvasTab,
                 currentVersion,
