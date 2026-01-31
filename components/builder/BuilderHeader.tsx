@@ -117,7 +117,7 @@ export function BuilderHeader({
                     setFormMetadata(
                         result.id, 
                         result.published, 
-                        result.share_url,
+                        result.short_code,
                         result.style,
                         result.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...result.design_settings } : DEFAULT_DESIGN_SETTINGS,
                         result.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...result.thank_you_page } : DEFAULT_THANK_YOU_PAGE,
@@ -129,7 +129,7 @@ export function BuilderHeader({
                     if (!isPublished) {
                         // First publish
                         toast.success(`Form published! Share URL copied to clipboard.`);
-                        navigator.clipboard.writeText(`${window.location.origin}/submit/${result.share_url}`);
+                        navigator.clipboard.writeText(`${window.location.origin}/submit/${result.short_code}`);
                     } else {
                         toast.success("Form republished successfully!");
                     }

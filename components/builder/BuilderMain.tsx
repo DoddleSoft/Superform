@@ -63,7 +63,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
         setFormMetadata(
             form.id,
             form.published,
-            form.share_url,
+            form.short_code,
             form.style || 'classic',
             form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
             form.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...form.thank_you_page } : DEFAULT_THANK_YOU_PAGE,
@@ -149,7 +149,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             setFormMetadata(
                 form.id,
                 form.published,
-                form.share_url,
+                form.short_code,
                 form.style || 'classic',
                 form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
                 form.thank_you_page ? { ...DEFAULT_THANK_YOU_PAGE, ...form.thank_you_page } : DEFAULT_THANK_YOU_PAGE,

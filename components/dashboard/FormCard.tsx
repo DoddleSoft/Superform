@@ -154,10 +154,10 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                                 Open in Builder
                             </Link>
                         </li>
-                        {form.published && form.share_url && (
+                        {form.published && form.short_code && (
                             <li>
                                 <Link
-                                    href={`/submit/${form.share_url}`}
+                                    href={`/submit/${form.short_code}`}
                                     target="_blank"
                                     className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
                                 >

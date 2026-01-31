@@ -312,7 +312,7 @@ export async function getFormContentByUrl(formUrl: string) {
     const { data, error } = await supabase
         .from("forms")
         .select("id, published_content, name, description, published_style, published_design_settings, published_thank_you_page, current_version") // Use published content for public view
-        .eq("share_url", formUrl)
+        .eq("short_code", formUrl)
         .eq("published", true)
         .single();
 

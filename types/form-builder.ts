@@ -185,7 +185,7 @@ export interface Form {
     style: FormStyle; // Draft style
     design_settings: FormDesignSettings; // Draft design settings
     thank_you_page: ThankYouPageSettings; // Thank you page settings
-    share_url: string | null;
+    short_code: string; // Short 8-character unique code for public URL
     created_at: string;
     updated_at: string;
     submission_count?: number; // Computed field from aggregation
