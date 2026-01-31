@@ -50,10 +50,10 @@ type CustomInstance = FormElementInstance & {
 };
 
 const headingStyles = {
-    h1: "text-3xl md:text-4xl font-bold",
-    h2: "text-2xl md:text-3xl font-semibold",
-    h3: "text-xl md:text-2xl font-medium",
-    h4: "text-lg md:text-xl font-medium",
+    h1: "text-2xl md:text-3xl font-bold",
+    h2: "text-xl md:text-2xl font-semibold",
+    h3: "text-lg md:text-xl font-medium",
+    h4: "text-base md:text-lg font-medium",
 };
 
 const alignStyles = {
@@ -100,7 +100,7 @@ function FormComponent({
             {level === "h3" && <h3 className={`form-section-title text-[#262627] ${headingStyles.h3}`}>{title}</h3>}
             {level === "h4" && <h4 className={`form-section-title text-[#262627] ${headingStyles.h4}`}>{title}</h4>}
             {subtitle && (
-                <p className="form-section-description text-lg text-[#262627]/70">{subtitle}</p>
+                <p className="form-section-description text-sm md:text-base text-[#262627]/70">{subtitle}</p>
             )}
         </div>
     );

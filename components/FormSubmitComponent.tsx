@@ -214,6 +214,9 @@ export function FormSubmitComponent({
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) {
+                // Check if current focused element is a textarea, if so allow enter for new line
+                if (document.activeElement instanceof HTMLTextAreaElement) return;
+
                 e.preventDefault();
                 if (isLastSection) {
                     handleSubmit();

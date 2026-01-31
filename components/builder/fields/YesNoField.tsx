@@ -117,8 +117,8 @@ function FormComponent({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <BsToggleOn className="form-field-icon w-6 h-6" />
+            <label className={`form-field-label text-base md:text-lg font-medium text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
+                <BsToggleOn className="form-field-icon w-5 h-5" />
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
@@ -128,15 +128,15 @@ function FormComponent({
                     type="button"
                     onClick={() => handleSelect("yes")}
                     className={`
-                        form-yesno-btn flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-lg border-2 text-lg font-medium
+                        form-yesno-btn flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 text-sm md:text-base font-medium
                         transition-all focus:outline-none focus:ring-2 focus:ring-[#0445AF]/50
                         ${value === "yes" 
-                            ? "bg-green-500 text-white border-green-500 shadow-lg" 
-                            : "bg-white/40 text-[#262627] border-[#262627]/30 hover:border-green-500 hover:bg-green-50"}
+                            ? "bg-green-500 text-white border-green-500 shadow-md" 
+                            : "bg-white/40 text-[#262627] border-[#262627]/20 hover:border-green-500 hover:bg-green-50"}
                         ${error ? "border-error" : ""}
                     `}
                 >
-                    <LuCheck className={`form-yesno-icon w-6 h-6 ${value === "yes" ? "text-white" : "text-green-500"}`} />
+                    <LuCheck className={`form-yesno-icon w-4 h-4 md:w-5 md:h-5 ${value === "yes" ? "text-white" : "text-green-500"}`} />
                     {yesLabel}
                 </button>
 
@@ -144,21 +144,21 @@ function FormComponent({
                     type="button"
                     onClick={() => handleSelect("no")}
                     className={`
-                        form-yesno-btn flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-lg border-2 text-lg font-medium
+                        form-yesno-btn flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 text-sm md:text-base font-medium
                         transition-all focus:outline-none focus:ring-2 focus:ring-[#0445AF]/50
                         ${value === "no" 
-                            ? "bg-red-500 text-white border-red-500 shadow-lg" 
-                            : "bg-white/40 text-[#262627] border-[#262627]/30 hover:border-red-500 hover:bg-red-50"}
+                            ? "bg-red-500 text-white border-red-500 shadow-md" 
+                            : "bg-white/40 text-[#262627] border-[#262627]/20 hover:border-red-500 hover:bg-red-50"}
                         ${error ? "border-error" : ""}
                     `}
                 >
-                    <LuX className={`form-yesno-icon w-6 h-6 ${value === "no" ? "text-white" : "text-red-500"}`} />
+                    <LuX className={`form-yesno-icon w-4 h-4 md:w-5 md:h-5 ${value === "no" ? "text-white" : "text-red-500"}`} />
                     {noLabel}
                 </button>
             </div>
 
             {helperText && (
-                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

@@ -103,16 +103,15 @@ function FormComponent({
     const { label, required, placeholder, helperText } = elementInstance.extraAttributes || extraAttributes;
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <label className={`text-xl md:text-2xl font-normal text-[#262627] form-field-label ${error ? "text-error" : ""}`}>
+        <div className="flex flex-col gap-3 w-full">
+            <label className={`form-field-label text-base md:text-lg font-medium text-[#262627] ${error ? "text-error" : ""}`}>
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
             <input
                 type="text"
-                className={`w-full bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/20 form-field-input ${error ? "border-error" : ""}`}
+                className={`form-field-input w-full bg-transparent border-b-2 border-[#262627]/20 text-base md:text-lg py-2 focus:outline-none focus:border-[#0445AF] transition-colors placeholder:text-[#262627]/40 ${error ? "border-error" : ""}`}
                 placeholder={placeholder}
-
                 onChange={(e) => {
                     setValue(e.target.value);
                     if (!submitValue) return;
@@ -129,7 +128,7 @@ function FormComponent({
                 value={value}
             />
             {helperText && (
-                <p className={`text-lg text-[#262627]/60 form-field-helper ${error && "text-error"}`}>
+                <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

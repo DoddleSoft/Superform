@@ -124,15 +124,15 @@ function FormComponent({
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <AiFillStar className="form-field-icon w-6 h-6 text-warning" />
+            <label className={`form-field-label text-base md:text-lg font-medium text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
+                <AiFillStar className="form-field-icon w-5 h-5 text-warning" />
                 {label}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
 
             {ratingStyle === "stars" ? (
                 <div 
-                    className="flex gap-2"
+                    className="flex gap-1.5"
                     onMouseLeave={() => setHoverRating(0)}
                 >
                     {Array.from({ length: maxRating }).map((_, i) => {
@@ -148,9 +148,9 @@ function FormComponent({
                                 onClick={() => handleClick(value)}
                             >
                                 {isFilled ? (
-                                    <AiFillStar className="form-rating-star w-10 h-10 md:w-12 md:h-12 text-warning drop-shadow-sm" />
+                                    <AiFillStar className="form-rating-star w-8 h-8 md:w-10 md:h-10 text-warning drop-shadow-sm" />
                                 ) : (
-                                    <AiOutlineStar className="form-rating-star w-10 h-10 md:w-12 md:h-12 text-[#262627]/30 hover:text-warning/50" />
+                                    <AiOutlineStar className="form-rating-star w-8 h-8 md:w-10 md:h-10 text-[#262627]/30 hover:text-warning/50" />
                                 )}
                             </button>
                         );
@@ -167,11 +167,11 @@ function FormComponent({
                                 key={i}
                                 type="button"
                                 className={`
-                                    form-rating-number w-12 h-12 md:w-14 md:h-14 rounded-lg border-2 text-lg md:text-xl font-semibold
+                                    form-rating-number w-10 h-10 md:w-11 md:h-11 rounded-lg border-2 text-sm md:text-base font-semibold
                                     transition-all focus:outline-none focus:ring-2 focus:ring-[#0445AF]/50
                                     ${isSelected 
                                         ? "bg-[#0445AF] text-white border-[#0445AF]" 
-                                        : "bg-white/40 text-[#262627] border-[#262627]/30 hover:border-[#0445AF] hover:bg-[#0445AF]/5"}
+                                        : "bg-white/40 text-[#262627] border-[#262627]/20 hover:border-[#0445AF] hover:bg-[#0445AF]/5"}
                                     ${error ? "border-error" : ""}
                                 `}
                                 onClick={() => handleClick(value)}
@@ -184,13 +184,13 @@ function FormComponent({
             )}
 
             {rating > 0 && (
-                <p className="form-field-helper text-base text-[#262627]/50">
+                <p className="form-field-helper text-xs text-[#262627]/50">
                     You selected: {rating} / {maxRating}
                 </p>
             )}
 
             {helperText && (
-                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}

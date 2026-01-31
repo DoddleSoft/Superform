@@ -99,7 +99,7 @@ function FormComponent({
     return (
         <div className={`flex flex-col gap-2 w-full ${alignStyles[align]}`}>
             <div 
-                className="form-field-helper text-lg text-[#262627]/80 leading-relaxed prose prose-lg max-w-none"
+                className="form-field-helper text-sm md:text-base text-[#262627]/80 leading-relaxed prose prose-sm md:prose-base max-w-none"
                 dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
         </div>

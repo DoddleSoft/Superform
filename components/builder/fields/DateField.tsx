@@ -137,17 +137,17 @@ function FormComponent({
     };
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <label className={`form-field-label text-xl md:text-2xl font-normal text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
-                <BsFillCalendarDateFill className="form-field-icon w-6 h-6" />
+        <div className="flex flex-col gap-3 w-full">
+            <label className={`form-field-label text-base md:text-lg font-medium text-[#262627] flex items-center gap-2 ${error ? "text-error" : ""}`}>
+                <BsFillCalendarDateFill className="form-field-icon w-5 h-5" />
                 {label}
-                {includeTime && <LuClock className="form-field-icon w-5 h-5 text-[#262627]/50" />}
+                {includeTime && <LuClock className="form-field-icon w-4 h-4 text-[#262627]/50" />}
                 {required && <span className="text-error ml-1">*</span>}
             </label>
             <div className="flex gap-3 flex-wrap">
                 <input
                     type="date"
-                    className={`form-field-input flex-1 min-w-[200px] bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
+                    className={`form-field-input flex-1 min-w-[180px] bg-transparent border-b-2 border-[#262627]/20 text-base md:text-lg py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
                     onChange={(e) => handleDateChange(e.target.value)}
                     value={dateValue}
                     onBlur={(e) => handleDateChange(e.target.value)}
@@ -155,7 +155,7 @@ function FormComponent({
                 {includeTime && (
                     <input
                         type="time"
-                        className={`form-field-input w-40 bg-transparent border-b border-[#262627]/30 text-2xl md:text-3xl py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
+                        className={`form-field-input w-32 bg-transparent border-b-2 border-[#262627]/20 text-base md:text-lg py-2 focus:outline-none focus:border-[#0445AF] transition-colors ${error ? "border-error" : ""}`}
                         onChange={(e) => handleTimeChange(e.target.value)}
                         value={timeValue}
                         onBlur={(e) => handleTimeChange(e.target.value)}
@@ -163,7 +163,7 @@ function FormComponent({
                 )}
             </div>
             {helperText && (
-                <p className={`form-field-helper text-lg text-[#262627]/60 ${error && "text-error"}`}>
+                <p className={`form-field-helper text-sm text-[#262627]/60 ${error && "text-error"}`}>
                     {helperText}
                 </p>
             )}
