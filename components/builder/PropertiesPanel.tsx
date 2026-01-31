@@ -37,7 +37,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PropertySection, PropertyField, PropertyTextarea, PropertySelect, PropertyColorPicker, PropertyToggle } from "./properties";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+
+type RightPanelTab = "properties" | "style";
 
 // Form style options with labels and descriptions
 const FORM_STYLE_OPTIONS: { value: FormStyle; label: string; description: string }[] = [
@@ -98,13 +100,15 @@ export function PropertiesPanel() {
         setSelectedSection,
         updateSection,
         reorderSections,
-        canvasTab,
         formStyle,
         setFormStyle,
         designSettings,
         updateDesignSetting,
         formId,
     } = useFormBuilder();
+
+    // Local state for right panel tab
+    const [activeTab, setActiveTab] = useState<RightPanelTab>('properties');
 
     // Find which section contains the selected element
     const findElementSection = () => {
@@ -164,9 +168,43 @@ export function PropertiesPanel() {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="h-full bg-base-100 border-l border-base-200 flex flex-col overflow-hidden"
         >
+            {/* Tab Switcher */}
+            <div className="p-3 border-b border-base-200 shrink-0">
+                <div className="flex items-center bg-base-200/80 rounded-full p-1 gap-0.5">
+                    <button
+                        onClick={() => setActiveTab('properties')}
+                        className={`
+                            flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium
+                            rounded-full transition-all duration-200
+                            ${activeTab === 'properties'
+                                ? "bg-base-100 text-base-content shadow-sm"
+                                : "text-base-content/50 hover:text-base-content"
+                            }
+                        `}
+                    >
+                        <LuSettings className="w-3.5 h-3.5" />
+                        <span>Properties</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('style')}
+                        className={`
+                            flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium
+                            rounded-full transition-all duration-200
+                            ${activeTab === 'style'
+                                ? "bg-base-100 text-base-content shadow-sm"
+                                : "text-base-content/50 hover:text-base-content"
+                            }
+                        `}
+                    >
+                        <LuPaintbrush className="w-3.5 h-3.5" />
+                        <span>Style</span>
+                    </button>
+                </div>
+            </div>
+
             <AnimatePresence mode="wait">
-                {/* Design Tab - Show style settings */}
-                {canvasTab === 'design' ? (
+                {/* Style Tab */}
+                {activeTab === 'style' ? (
                     <DesignSettingsView 
                         formStyle={formStyle} 
                         onStyleChange={handleStyleChange}
@@ -335,7 +373,7 @@ function SectionPropertiesView({
     );
 }
 
-// Design Settings View - shown when Design tab is active
+// Design Settings View - shown when Style tab is active
 function DesignSettingsView({ 
     formStyle, 
     onStyleChange,
@@ -356,23 +394,6 @@ function DesignSettingsView({
             exit="exit"
             className="flex-1 flex flex-col overflow-hidden"
         >
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                        <LuPaintbrush className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-sm text-base-content">
-                            Design
-                        </h3>
-                        <p className="text-[10px] text-base-content/50 uppercase tracking-wide">
-                            Form Appearance
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
                 {/* Layout Section */}
@@ -513,7 +534,7 @@ function SectionListView() {
             exit="exit"
             className="flex-1 flex flex-col overflow-hidden"
         >
-            {/* Header */}
+            {/* Sections Header */}
             <div className="px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">

@@ -1,8 +1,8 @@
 "use client";
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { publishForm } from "@/actions/form";
-import { useState, useTransition } from "react";
+import { publishForm, updateFormMetadata } from "@/actions/form";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { 
@@ -14,21 +14,18 @@ import {
     LuUndo2,
     LuRedo2,
     LuEye,
-    LuSettings,
-    LuShare2,
     LuPenTool,
     LuChartBar,
     LuRocket,
     LuHistory,
     LuCircleAlert,
+    LuPencil,
 } from "react-icons/lu";
 import { SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, saveStatusVariants } from "@/lib/animations";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
 import { useToast } from "@/context/ToastContext";
-
-type TabType = "build" | "integrate" | "settings" | "share" | "results";
 
 export function BuilderHeader({
     activeTab,
@@ -46,9 +43,62 @@ export function BuilderHeader({
     const { formId, isPublished, setFormMetadata, hasUnpublishedChanges, currentVersion, setVersionInfo, shareUrl, sections, formStyle, designSettings, updatePublishedSnapshot } = useFormBuilder();
     const [loading, startTransition] = useTransition();
     const [showVersionHistory, setShowVersionHistory] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editedTitle, setEditedTitle] = useState(formName || "Untitled Form");
+    const [isSavingTitle, setIsSavingTitle] = useState(false);
+    const titleInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const { userId } = useAuth();
     const toast = useToast();
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (isEditingTitle && titleInputRef.current) {
+            titleInputRef.current.focus();
+            titleInputRef.current.select();
+        }
+    }, [isEditingTitle]);
+
+    // Update editedTitle when formName prop changes
+    useEffect(() => {
+        setEditedTitle(formName || "Untitled Form");
+    }, [formName]);
+
+    const handleTitleSave = async () => {
+        if (!formId || !editedTitle.trim()) {
+            setEditedTitle(formName || "Untitled Form");
+            setIsEditingTitle(false);
+            return;
+        }
+        
+        if (editedTitle.trim() === formName) {
+            setIsEditingTitle(false);
+            return;
+        }
+
+        setIsSavingTitle(true);
+        try {
+            await updateFormMetadata(formId, { name: editedTitle.trim() });
+            toast.success("Form name updated");
+            setIsEditingTitle(false);
+        } catch (error) {
+            console.error("Failed to update form name:", error);
+            toast.error("Failed to update form name");
+            setEditedTitle(formName || "Untitled Form");
+        } finally {
+            setIsSavingTitle(false);
+        }
+    };
+
+    const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleTitleSave();
+        } else if (e.key === "Escape") {
+            setEditedTitle(formName || "Untitled Form");
+            setIsEditingTitle(false);
+        }
+    };
 
     const handlePublish = async () => {
         if (!formId || !userId) return;
@@ -104,9 +154,6 @@ export function BuilderHeader({
 
     const tabs = [
         { id: "build", label: "Build", icon: LuPenTool },
-        { id: "integrate", label: "Integrate", icon: LuRocket, disabled: true },
-        { id: "settings", label: "Settings", icon: LuSettings, disabled: true },
-        { id: "share", label: "Share", icon: LuShare2, disabled: true },
         { id: "results", label: "Results", icon: LuChartBar },
     ];
 
@@ -127,9 +174,34 @@ export function BuilderHeader({
                     <div className="h-5 w-px bg-base-200" />
                     
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <h1 className="text-base font-semibold text-base-content truncate max-w-[200px]">
-                            {formName || "Untitled Form"}
-                        </h1>
+                        {isEditingTitle ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={titleInputRef}
+                                    type="text"
+                                    value={editedTitle}
+                                    onChange={(e) => setEditedTitle(e.target.value)}
+                                    onBlur={handleTitleSave}
+                                    onKeyDown={handleTitleKeyDown}
+                                    disabled={isSavingTitle}
+                                    className="text-base font-semibold text-base-content bg-base-200/60 px-2 py-1 rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 max-w-[200px]"
+                                />
+                                {isSavingTitle && (
+                                    <LuLoader className="w-4 h-4 animate-spin text-base-content/50" />
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditingTitle(true)}
+                                className="group flex items-center gap-2 hover:bg-base-200/60 px-2 py-1 -ml-2 rounded-lg transition-colors"
+                                title="Click to edit form name"
+                            >
+                                <h1 className="text-base font-semibold text-base-content truncate max-w-[200px]">
+                                    {formName || "Untitled Form"}
+                                </h1>
+                                <LuPencil className="w-3.5 h-3.5 text-base-content/30 group-hover:text-base-content/60 transition-colors" />
+                            </button>
+                        )}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={saveStatus}
@@ -171,24 +243,16 @@ export function BuilderHeader({
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = tab.id === activeTab;
-                            const isDisabled = tab.disabled;
                             
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => {
-                                        if (!isDisabled && (tab.id === "build" || tab.id === "results")) {
-                                            onTabChange(tab.id as "build" | "results");
-                                        }
-                                    }}
-                                    disabled={isDisabled}
+                                    onClick={() => onTabChange(tab.id as "build" | "results")}
                                     className={`
                                         flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium
                                         rounded-full transition-all duration-200
                                         ${isActive 
                                             ? "bg-base-100 text-base-content shadow-sm" 
-                                            : isDisabled
-                                            ? "text-base-content/25 cursor-not-allowed"
                                             : "text-base-content/50 hover:text-base-content hover:bg-base-100/50"
                                         }
                                     `}
