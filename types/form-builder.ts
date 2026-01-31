@@ -14,6 +14,7 @@ export enum FormElementType {
     HEADING = "Heading",
     RICH_TEXT = "RichText",
     FILE_UPLOAD = "FileUpload",
+    IMAGE = "Image",
 }
 
 // Form display styles

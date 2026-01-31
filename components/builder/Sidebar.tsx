@@ -21,7 +21,8 @@ import {
     LuFileText,
     LuGripVertical,
     LuListChecks,
-    LuUpload
+    LuUpload,
+    LuImage
 } from "react-icons/lu";
 import { ReactNode } from "react";
 
@@ -42,6 +43,7 @@ const ELEMENT_ICONS: Record<FormElementType, ReactNode> = {
     [FormElementType.HEADING]: <LuHeading className="w-4 h-4" />,
     [FormElementType.RICH_TEXT]: <LuFileText className="w-4 h-4" />,
     [FormElementType.FILE_UPLOAD]: <LuUpload className="w-4 h-4" />,
+    [FormElementType.IMAGE]: <LuImage className="w-4 h-4" />,
 };
 
 // Element categories for organization
@@ -79,10 +81,11 @@ const elementCategories = [
     },
     {
         name: "Display",
-        description: "Text & headings",
+        description: "Text & media",
         elements: [
             FormElementType.HEADING,
             FormElementType.RICH_TEXT,
+            FormElementType.IMAGE,
         ],
     },
 ];
