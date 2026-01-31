@@ -3,20 +3,23 @@
 import {
     DndContext,
     DragEndEvent,
+    DragOverEvent,
     DragOverlay,
     DragStartEvent,
     MouseSensor,
     TouchSensor,
     useSensor,
     useSensors,
+    pointerWithin,
+    rectIntersection,
 } from "@dnd-kit/core";
 import { LeftPanel } from "./LeftPanel";
 import { Canvas } from "./Canvas";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { useState, useEffect } from "react";
-import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormElementInstance, FormElementType, FormSection, createSection, FormStyle, DEFAULT_DESIGN_SETTINGS, migrateToRowFormat, FormRow, createRow } from "@/types/form-builder";
 import { FormSubmission } from "@/types/submission";
-import { useFormBuilder } from "@/context/FormBuilderContext";
+import { useFormBuilder, DropPosition } from "@/context/FormBuilderContext";
 import { arrayMove } from "@dnd-kit/sortable";
 import { BuilderHeader } from "./BuilderHeader";
 import { FormElements } from "./FormElements";
@@ -26,7 +29,7 @@ import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
 
 export function BuilderMain({ form, submissions }: { form: any, submissions: FormSubmission[] }) {
-    const { sections, addElement, setSections, setFormMetadata, setFormStyle, formId, addSection, moveElement } = useFormBuilder();
+    const { sections, addElement, addElementToRow, setSections, setFormMetadata, setFormStyle, formId, addSection, moveElement } = useFormBuilder();
     const [activeSidebarElement, setActiveSidebarElement] = useState<FormElementType | null>(null);
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
     const [activeElementSectionId, setActiveElementSectionId] = useState<string | null>(null);
@@ -41,19 +44,22 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
 
     useEffect(() => {
         if (form) {
-            // Handle both old format (flat array) and new format (sections)
+            // Handle both old format (flat array) and new format (sections with rows)
             const content = form.content || [];
             let sectionsToSet: FormSection[];
             
             if (Array.isArray(content) && content.length > 0) {
                 // Check if it's the new section format
-                if (content[0]?.elements !== undefined) {
-                    // New section format
-                    sectionsToSet = content;
+                if (content[0]?.rows !== undefined || content[0]?.elements !== undefined) {
+                    // Migrate each section to row format if needed
+                    sectionsToSet = content.map((s: any) => migrateToRowFormat(s));
                 } else {
-                    // Old flat array format - migrate to section format
+                    // Old flat array format - migrate to section with rows format
                     const defaultSection = createSection(crypto.randomUUID(), "Section 1");
-                    defaultSection.elements = content;
+                    // Convert each element to its own row
+                    defaultSection.rows = (content as FormElementInstance[]).map(
+                        (el: FormElementInstance) => createRow(crypto.randomUUID(), el)
+                    );
                     sectionsToSet = [defaultSection];
                 }
             } else {
@@ -120,6 +126,12 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             setActiveElementSectionId(event.active.data.current.sectionId);
             return;
         }
+
+        // If dragging a row
+        if (event.active.data.current?.isDesignerRow) {
+            // Could set active row state here if needed
+            return;
+        }
     }
 
     function onDragEnd(event: DragEndEvent) {
@@ -130,80 +142,132 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
 
         if (!over) return;
 
-        const overId = String(over.id);
+        const activeData = active.data.current;
+        const overData = over.data.current;
 
-        // Drop Sidebar Element -> Section Drop Area
-        if (active.data.current?.isDesignerBtnElement && over.data.current?.isDesignerDropArea) {
-            const type = active.data.current.type as FormElementType;
+        // Drop Sidebar Element -> Section Drop Area (empty section)
+        if (activeData?.isDesignerBtnElement && overData?.isDesignerDropArea) {
+            const type = activeData.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
-            const sectionId = over.data.current.sectionId;
+            const sectionId = overData.sectionId;
 
             if (sectionId) {
                 const section = sections.find(s => s.id === sectionId);
-                addElement(sectionId, section?.elements.length || 0, newElement);
+                addElement(sectionId, section?.rows.length || 0, newElement);
+            }
+            return;
+        }
+
+        // Drop Sidebar Element -> Side drop area (add to existing row)
+        if (activeData?.isDesignerBtnElement && overData?.isSideDropArea) {
+            const type = activeData.type as FormElementType;
+            const newElement = FormElements[type].construct(crypto.randomUUID());
+            const sectionId = overData.sectionId;
+            const rowId = overData.rowId;
+
+            if (sectionId && rowId) {
+                addElementToRow(sectionId, rowId, newElement, 'right');
             }
             return;
         }
 
         // Drop Sidebar Element -> Over another Element in a section
-        if (active.data.current?.isDesignerBtnElement && over.data.current?.isDesignerElement) {
-            const type = active.data.current.type as FormElementType;
+        if (activeData?.isDesignerBtnElement && overData?.isDesignerElement) {
+            const type = activeData.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
-            const sectionId = over.data.current.sectionId;
+            const sectionId = overData.sectionId;
+            const rowIndex = overData.rowIndex ?? 0;
 
             if (sectionId) {
-                const section = sections.find(s => s.id === sectionId);
-                const overElementIndex = section?.elements.findIndex(el => el.id === over.id) ?? -1;
-
-                if (overElementIndex !== -1) {
-                    addElement(sectionId, overElementIndex, newElement);
-                } else {
-                    addElement(sectionId, section?.elements.length || 0, newElement);
-                }
+                // Add above the hovered element's row
+                addElement(sectionId, rowIndex, newElement);
             }
             return;
         }
 
-        // Reordering Elements within/between sections
-        if (active.data.current?.isDesignerElement && over.data.current?.isDesignerElement) {
+        // Drop Sidebar Element -> Over a Row
+        if (activeData?.isDesignerBtnElement && overData?.isDesignerRow) {
+            const type = activeData.type as FormElementType;
+            const newElement = FormElements[type].construct(crypto.randomUUID());
+            const sectionId = overData.sectionId;
+            const rowIndex = overData.rowIndex ?? 0;
+
+            if (sectionId) {
+                addElement(sectionId, rowIndex, newElement);
+            }
+            return;
+        }
+
+        // Reordering Rows within same section
+        if (activeData?.isDesignerRow && overData?.isDesignerRow) {
+            const fromSectionId = activeData.sectionId;
+            const toSectionId = overData.sectionId;
+            const activeRowId = active.id;
+            const overRowId = over.id;
+
+            if (fromSectionId === toSectionId && activeRowId !== overRowId) {
+                setSections(prev => prev.map(section => {
+                    if (section.id !== fromSectionId) return section;
+                    
+                    const oldIndex = section.rows.findIndex(r => r.id === activeRowId);
+                    const newIndex = section.rows.findIndex(r => r.id === overRowId);
+                    
+                    if (oldIndex === -1 || newIndex === -1) return section;
+                    
+                    return {
+                        ...section,
+                        rows: arrayMove(section.rows, oldIndex, newIndex)
+                    };
+                }));
+            }
+            return;
+        }
+
+        // Reordering Elements - move to different row position
+        if (activeData?.isDesignerElement && overData?.isDesignerElement) {
             const activeId = active.id;
             const overId = over.id;
-            const fromSectionId = active.data.current.sectionId;
-            const toSectionId = over.data.current.sectionId;
+            const fromSectionId = activeData.sectionId;
+            const toSectionId = overData.sectionId;
+            const toRowIndex = overData.rowIndex ?? 0;
 
-            if (activeId !== overId || fromSectionId !== toSectionId) {
-                if (fromSectionId === toSectionId) {
-                    // Same section reorder
-                    setSections(prev => prev.map(section => {
-                        if (section.id === fromSectionId) {
-                            const oldIndex = section.elements.findIndex(el => el.id === activeId);
-                            const newIndex = section.elements.findIndex(el => el.id === overId);
-                            return {
-                                ...section,
-                                elements: arrayMove(section.elements, oldIndex, newIndex)
-                            };
-                        }
-                        return section;
-                    }));
-                } else {
-                    // Cross-section move
-                    const toSection = sections.find(s => s.id === toSectionId);
-                    const newIndex = toSection?.elements.findIndex(el => el.id === overId) ?? 0;
-                    moveElement(fromSectionId, toSectionId, String(activeId), newIndex);
-                }
+            if (activeId !== overId) {
+                moveElement(fromSectionId, toSectionId, String(activeId), toRowIndex);
             }
             return;
         }
 
-        // Drop element onto section drop area (cross-section move)
-        if (active.data.current?.isDesignerElement && over.data.current?.isDesignerDropArea) {
-            const fromSectionId = active.data.current.sectionId;
-            const toSectionId = over.data.current.sectionId;
+        // Move element to side drop zone (add side-by-side)
+        if (activeData?.isDesignerElement && overData?.isSideDropArea) {
+            const elementId = String(active.id);
+            const fromSectionId = activeData.sectionId;
+            const toSectionId = overData.sectionId;
+            const targetRowId = overData.rowId;
+            const toRowIndex = overData.rowIndex ?? 0;
 
-            if (fromSectionId !== toSectionId && toSectionId) {
+            // Move element to side of existing row
+            moveElement(fromSectionId, toSectionId, elementId, toRowIndex, 'side', targetRowId);
+            return;
+        }
+
+        // Drop element onto section drop area (cross-section move or to empty section)
+        if (activeData?.isDesignerElement && overData?.isDesignerDropArea) {
+            const fromSectionId = activeData.sectionId;
+            const toSectionId = overData.sectionId;
+
+            if (toSectionId) {
                 const toSection = sections.find(s => s.id === toSectionId);
-                moveElement(fromSectionId, toSectionId, String(active.id), toSection?.elements.length || 0);
+                moveElement(fromSectionId, toSectionId, String(active.id), toSection?.rows.length || 0);
             }
+        }
+
+        // Move element to a row
+        if (activeData?.isDesignerElement && overData?.isDesignerRow) {
+            const fromSectionId = activeData.sectionId;
+            const toSectionId = overData.sectionId;
+            const toRowIndex = overData.rowIndex ?? 0;
+
+            moveElement(fromSectionId, toSectionId, String(active.id), toRowIndex);
         }
     }
 

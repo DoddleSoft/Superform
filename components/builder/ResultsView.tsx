@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { FormElementType, FormSection } from "@/types/form-builder";
+import { FormElementType, FormSection, getSectionElements } from "@/types/form-builder";
 import {
     FormSubmission,
     SubmissionWithProgress,
@@ -29,7 +29,7 @@ type FilterMode = "all" | "complete" | "partial";
 // Helper to extract columns from a sections array (current form or snapshot)
 function extractColumnsFromSections(sections: FormSection[]): Column[] {
     const cols: Column[] = [];
-    const allElements = sections.flatMap((section) => section.elements);
+    const allElements = sections.flatMap((section) => getSectionElements(section));
 
     allElements.forEach((element) => {
         switch (element.type) {

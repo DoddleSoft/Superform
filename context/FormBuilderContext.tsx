@@ -10,7 +10,7 @@ import {
     useCallback,
     useMemo,
 } from "react";
-import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, createSection, FormStyle, CanvasTab, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow, createRow, getSectionElements } from "@/types/form-builder";
 
 // Published snapshot for diff comparison
 interface PublishedSnapshot {
@@ -18,6 +18,9 @@ interface PublishedSnapshot {
     style: FormStyle | null;
     designSettings: FormDesignSettings | null;
 }
+
+// Drop position for elements - 'before', 'after', or 'side' (add to same row)
+export type DropPosition = 'before' | 'after' | 'side';
 
 type FormBuilderContextType = {
     // Section management
@@ -29,19 +32,37 @@ type FormBuilderContextType = {
     // Section CRUD
     addSection: (index: number, section?: FormSection) => FormSection;
     removeSection: (sectionId: string) => void;
-    updateSection: (sectionId: string, updates: Partial<Omit<FormSection, "id" | "elements">>) => void;
+    updateSection: (sectionId: string, updates: Partial<Omit<FormSection, "id" | "rows">>) => void;
     reorderSections: (sectionIds: string[]) => void;
     
-    // Element management (now section-aware)
+    // Row-based element management
     selectedElement: FormElementInstance | null;
     setSelectedElement: Dispatch<SetStateAction<FormElementInstance | null>>;
-    addElement: (sectionId: string, index: number, element: FormElementInstance) => void;
+    
+    // Add element to a new row at index, or add to existing row
+    addElement: (sectionId: string, rowIndex: number, element: FormElementInstance, position?: DropPosition, targetRowId?: string) => void;
+    // Add element to the side of an existing element (same row)
+    addElementToRow: (sectionId: string, rowId: string, element: FormElementInstance, position: 'left' | 'right') => void;
+    // Remove element from its row (and remove row if empty)
     removeElement: (sectionId: string, elementId: string) => void;
     updateElement: (sectionId: string, elementId: string, updates: Partial<FormElementInstance>) => void;
-    updateElementById: (elementId: string, updates: Partial<FormElementInstance>) => void; // Convenience method that finds section automatically
-    removeElementById: (elementId: string) => void; // Convenience method that finds section automatically
-    moveElement: (fromSectionId: string, toSectionId: string, elementId: string, newIndex: number) => void;
-    findElementSection: (elementId: string) => string | null; // Helper to find which section contains an element
+    updateElementById: (elementId: string, updates: Partial<FormElementInstance>) => void;
+    removeElementById: (elementId: string) => void;
+    // Move element between rows/sections
+    moveElement: (
+        fromSectionId: string, 
+        toSectionId: string, 
+        elementId: string, 
+        toRowIndex: number, 
+        position?: DropPosition,
+        targetRowId?: string
+    ) => void;
+    // Find section and row for an element
+    findElementLocation: (elementId: string) => { sectionId: string; rowId: string; rowIndex: number } | null;
+    findElementSection: (elementId: string) => string | null;
+    
+    // Get all elements from a section (flattened from rows) - for backward compatibility
+    getSectionElements: (sectionId: string) => FormElementInstance[];
 
     // Form Metadata
     formId: string | null;
@@ -72,7 +93,7 @@ type FormBuilderContextType = {
     
     // Versioning
     currentVersion: number;
-    hasUnpublishedChanges: boolean; // Now computed from diff
+    hasUnpublishedChanges: boolean;
     publishedAt: string | null;
     setVersionInfo: (version: number, publishedAt: string | null) => void;
     
@@ -218,7 +239,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
     }, [currentSectionId, selectedSection]);
 
-    const updateSection = useCallback((sectionId: string, updates: Partial<Omit<FormSection, "id" | "elements">>) => {
+    const updateSection = useCallback((sectionId: string, updates: Partial<Omit<FormSection, "id" | "rows">>) => {
         setSections((prev) =>
             prev.map((s) => (s.id === sectionId ? { ...s, ...updates } : s))
         );
@@ -234,16 +255,72 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         });
     }, []);
 
-    // Element operations (section-aware)
-    const addElement = useCallback((sectionId: string, index: number, element: FormElementInstance) => {
+    // Helper to get all elements from a section (flattened from rows)
+    const getSectionElementsHelper = useCallback((sectionId: string): FormElementInstance[] => {
+        const section = sections.find(s => s.id === sectionId);
+        if (!section) return [];
+        return getSectionElements(section);
+    }, [sections]);
+
+    // Row-based element operations
+    const addElement = useCallback((
+        sectionId: string, 
+        rowIndex: number, 
+        element: FormElementInstance, 
+        position: DropPosition = 'after',
+        targetRowId?: string
+    ) => {
         setSections((prev) =>
             prev.map((section) => {
-                if (section.id === sectionId) {
-                    const newElements = [...section.elements];
-                    newElements.splice(index, 0, element);
-                    return { ...section, elements: newElements };
+                if (section.id !== sectionId) return section;
+
+                const newRows = [...section.rows];
+                
+                // If adding to the side of an existing row
+                if (position === 'side' && targetRowId) {
+                    const targetRowIdx = newRows.findIndex(r => r.id === targetRowId);
+                    if (targetRowIdx !== -1 && newRows[targetRowIdx].elements.length < 2) {
+                        newRows[targetRowIdx] = {
+                            ...newRows[targetRowIdx],
+                            elements: [...newRows[targetRowIdx].elements, element]
+                        };
+                        return { ...section, rows: newRows };
+                    }
                 }
-                return section;
+                
+                // Create a new row and insert at position
+                const newRow = createRow(crypto.randomUUID(), element);
+                newRows.splice(rowIndex, 0, newRow);
+                return { ...section, rows: newRows };
+            })
+        );
+        setSelectedElement(element);
+        setSelectedSection(null);
+    }, []);
+
+    // Add element to the side of an existing element (same row)
+    const addElementToRow = useCallback((
+        sectionId: string, 
+        rowId: string, 
+        element: FormElementInstance, 
+        position: 'left' | 'right'
+    ) => {
+        setSections((prev) =>
+            prev.map((section) => {
+                if (section.id !== sectionId) return section;
+
+                const newRows = section.rows.map(row => {
+                    if (row.id !== rowId) return row;
+                    // Max 2 elements per row
+                    if (row.elements.length >= 2) return row;
+                    
+                    const newElements = position === 'left' 
+                        ? [element, ...row.elements]
+                        : [...row.elements, element];
+                    return { ...row, elements: newElements };
+                });
+                
+                return { ...section, rows: newRows };
             })
         );
         setSelectedElement(element);
@@ -253,13 +330,16 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const removeElement = useCallback((sectionId: string, elementId: string) => {
         setSections((prev) =>
             prev.map((section) => {
-                if (section.id === sectionId) {
-                    return {
-                        ...section,
-                        elements: section.elements.filter((el) => el.id !== elementId),
-                    };
-                }
-                return section;
+                if (section.id !== sectionId) return section;
+
+                const newRows = section.rows
+                    .map(row => ({
+                        ...row,
+                        elements: row.elements.filter(el => el.id !== elementId)
+                    }))
+                    .filter(row => row.elements.length > 0); // Remove empty rows
+
+                return { ...section, rows: newRows };
             })
         );
         if (selectedElement?.id === elementId) {
@@ -270,15 +350,17 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     const updateElement = useCallback((sectionId: string, elementId: string, updates: Partial<FormElementInstance>) => {
         setSections((prev) =>
             prev.map((section) => {
-                if (section.id === sectionId) {
-                    return {
-                        ...section,
-                        elements: section.elements.map((el) =>
+                if (section.id !== sectionId) return section;
+                
+                return {
+                    ...section,
+                    rows: section.rows.map(row => ({
+                        ...row,
+                        elements: row.elements.map(el =>
                             el.id === elementId ? { ...el, ...updates } : el
-                        ),
-                    };
-                }
-                return section;
+                        )
+                    }))
+                };
             })
         );
         if (selectedElement?.id === elementId) {
@@ -286,57 +368,118 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
     }, [selectedElement]);
 
-    const moveElement = useCallback((fromSectionId: string, toSectionId: string, elementId: string, newIndex: number) => {
+    const moveElement = useCallback((
+        fromSectionId: string, 
+        toSectionId: string, 
+        elementId: string, 
+        toRowIndex: number,
+        position: DropPosition = 'after',
+        targetRowId?: string
+    ) => {
         setSections((prev) => {
             // Find the element
-            const fromSection = prev.find((s) => s.id === fromSectionId);
-            const element = fromSection?.elements.find((el) => el.id === elementId);
+            let element: FormElementInstance | undefined;
+            for (const section of prev) {
+                for (const row of section.rows) {
+                    element = row.elements.find(el => el.id === elementId);
+                    if (element) break;
+                }
+                if (element) break;
+            }
             if (!element) return prev;
 
             return prev.map((section) => {
-                if (section.id === fromSectionId && fromSectionId !== toSectionId) {
-                    // Remove from source
-                    return {
-                        ...section,
-                        elements: section.elements.filter((el) => el.id !== elementId),
-                    };
+                // Remove from source section
+                if (section.id === fromSectionId) {
+                    const newRows = section.rows
+                        .map(row => ({
+                            ...row,
+                            elements: row.elements.filter(el => el.id !== elementId)
+                        }))
+                        .filter(row => row.elements.length > 0);
+
+                    // If same section, also add to target position
+                    if (fromSectionId === toSectionId) {
+                        // Adding to the side of an existing row
+                        if (position === 'side' && targetRowId) {
+                            const targetRowIdx = newRows.findIndex(r => r.id === targetRowId);
+                            if (targetRowIdx !== -1 && newRows[targetRowIdx].elements.length < 2) {
+                                newRows[targetRowIdx] = {
+                                    ...newRows[targetRowIdx],
+                                    elements: [...newRows[targetRowIdx].elements, element]
+                                };
+                                return { ...section, rows: newRows };
+                            }
+                        }
+                        // Create new row
+                        const newRow = createRow(crypto.randomUUID(), element);
+                        newRows.splice(toRowIndex, 0, newRow);
+                    }
+
+                    return { ...section, rows: newRows };
                 }
-                if (section.id === toSectionId) {
-                    // Add to target
-                    const newElements = section.elements.filter((el) => el.id !== elementId);
-                    newElements.splice(newIndex, 0, element);
-                    return { ...section, elements: newElements };
+                
+                // Add to target section (different from source)
+                if (section.id === toSectionId && fromSectionId !== toSectionId) {
+                    const newRows = [...section.rows];
+                    
+                    // Adding to the side of an existing row
+                    if (position === 'side' && targetRowId) {
+                        const targetRowIdx = newRows.findIndex(r => r.id === targetRowId);
+                        if (targetRowIdx !== -1 && newRows[targetRowIdx].elements.length < 2) {
+                            newRows[targetRowIdx] = {
+                                ...newRows[targetRowIdx],
+                                elements: [...newRows[targetRowIdx].elements, element]
+                            };
+                            return { ...section, rows: newRows };
+                        }
+                    }
+                    
+                    // Create new row
+                    const newRow = createRow(crypto.randomUUID(), element);
+                    newRows.splice(toRowIndex, 0, newRow);
+                    return { ...section, rows: newRows };
                 }
+                
                 return section;
             });
         });
     }, []);
 
-    // Helper to find which section contains an element
-    const findElementSection = useCallback((elementId: string): string | null => {
+    // Helper to find section and row for an element
+    const findElementLocation = useCallback((elementId: string): { sectionId: string; rowId: string; rowIndex: number } | null => {
         for (const section of sections) {
-            if (section.elements.some(el => el.id === elementId)) {
-                return section.id;
+            for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex++) {
+                const row = section.rows[rowIndex];
+                if (row.elements.some(el => el.id === elementId)) {
+                    return { sectionId: section.id, rowId: row.id, rowIndex };
+                }
             }
         }
         return null;
     }, [sections]);
 
+    // Helper to find which section contains an element
+    const findElementSection = useCallback((elementId: string): string | null => {
+        const location = findElementLocation(elementId);
+        return location?.sectionId ?? null;
+    }, [findElementLocation]);
+
     // Convenience method that finds section automatically
     const updateElementById = useCallback((elementId: string, updates: Partial<FormElementInstance>) => {
-        const sectionId = findElementSection(elementId);
-        if (sectionId) {
-            updateElement(sectionId, elementId, updates);
+        const location = findElementLocation(elementId);
+        if (location) {
+            updateElement(location.sectionId, elementId, updates);
         }
-    }, [findElementSection, updateElement]);
+    }, [findElementLocation, updateElement]);
 
     // Convenience method that finds section automatically
     const removeElementById = useCallback((elementId: string) => {
-        const sectionId = findElementSection(elementId);
-        if (sectionId) {
-            removeElement(sectionId, elementId);
+        const location = findElementLocation(elementId);
+        if (location) {
+            removeElement(location.sectionId, elementId);
         }
-    }, [findElementSection, removeElement]);
+    }, [findElementLocation, removeElement]);
 
     return (
         <FormBuilderContext.Provider
@@ -352,12 +495,15 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 selectedElement,
                 setSelectedElement,
                 addElement,
+                addElementToRow,
                 removeElement,
                 updateElement,
                 updateElementById,
                 removeElementById,
                 moveElement,
+                findElementLocation,
                 findElementSection,
+                getSectionElements: getSectionElementsHelper,
                 formId,
                 isPublished,
                 shareUrl,

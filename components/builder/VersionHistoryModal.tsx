@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
 import { useToast } from "@/context/ToastContext";
 import { getFormVersions, restoreFormVersion } from "@/actions/form";
-import { FormVersion, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormVersion, DEFAULT_DESIGN_SETTINGS, getSectionElements } from "@/types/form-builder";
 import { LuX, LuLoader, LuHistory, LuRotateCcw, LuCheck } from "react-icons/lu";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -131,7 +131,7 @@ export function VersionHistoryModal({ isOpen, onClose }: VersionHistoryModalProp
                                     const isCurrent = version.version === currentVersion;
                                     const sectionCount = Array.isArray(version.content) ? version.content.length : 0;
                                     const elementCount = Array.isArray(version.content)
-                                        ? version.content.reduce((acc, section) => acc + (section.elements?.length || 0), 0)
+                                        ? version.content.reduce((acc, section) => acc + getSectionElements(section).length, 0)
                                         : 0;
 
                                     return (

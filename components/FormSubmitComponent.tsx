@@ -1,6 +1,6 @@
 "use client";
 
-import { FormElementInstance, FormSection, FormContent, FormStyle, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormContent, FormStyle, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, getSectionElements, migrateToRowFormat } from "@/types/form-builder";
 import { FormElements } from "@/components/builder/FormElements";
 import { useRef, useState, useTransition, useCallback, useEffect, useMemo } from "react";
 import { submitForm, savePartialSubmission } from "@/actions/form";
@@ -47,12 +47,32 @@ export function FormSubmitComponent({
     const sessionId = useRef<string>(generateSessionId());
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Normalize content: support both old flat format and new section format
-    const sections: FormSection[] = Array.isArray(content) && content.length > 0
-        ? (content[0] as any)?.elements !== undefined
-            ? content as FormSection[] // New section format
-            : [{ id: "default", title: "Form", elements: content as unknown as FormElementInstance[] }] // Old flat format
-        : [];
+    // Normalize content: support old flat format, old section format (elements), and new row format
+    const sections: FormSection[] = useMemo(() => {
+        if (!Array.isArray(content) || content.length === 0) {
+            return [];
+        }
+        
+        // Check if it's the new row format
+        if ((content[0] as any)?.rows !== undefined) {
+            return content as FormSection[];
+        }
+        
+        // Check if it's the old section format with elements
+        if ((content[0] as any)?.elements !== undefined) {
+            // Migrate each section to row format
+            return content.map((s: any) => migrateToRowFormat(s));
+        }
+        
+        // Old flat format - convert to section with rows
+        const elements = content as unknown as FormElementInstance[];
+        const section = migrateToRowFormat({
+            id: "default",
+            title: "Form",
+            elements,
+        });
+        return [section];
+    }, [content]);
 
     const currentSection = sections[currentSectionIndex];
     const isFirstSection = currentSectionIndex === 0;
@@ -125,7 +145,9 @@ export function FormSubmitComponent({
         formErrors.current = {};
         let isValid = true;
 
-        for (const field of currentSection.elements) {
+        // Get all elements from the section's rows
+        const elements = getSectionElements(currentSection);
+        for (const field of elements) {
             const actualValue = formValues.current[field.id] || "";
             const valid = FormElements[field.type].validate(field, actualValue);
 
@@ -148,7 +170,9 @@ export function FormSubmitComponent({
         let isValid = true;
 
         for (const section of sections) {
-            for (const field of section.elements) {
+            // Get all elements from the section's rows
+            const elements = getSectionElements(section);
+            for (const field of elements) {
                 const actualValue = formValues.current[field.id] || "";
                 const valid = FormElements[field.type].validate(field, actualValue);
 

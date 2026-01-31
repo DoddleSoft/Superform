@@ -17,7 +17,7 @@ import {
     LuLayoutGrid
 } from "react-icons/lu";
 import { motion, AnimatePresence, scaleIn } from "@/lib/animations";
-import { FormSection, FormStyle, FormElementType, FormDesignSettings, FormFontFamily, ButtonCornerRadius, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormSection, FormStyle, FormElementType, FormDesignSettings, FormFontFamily, ButtonCornerRadius, DEFAULT_DESIGN_SETTINGS, getSectionElements } from "@/types/form-builder";
 import { saveFormStyle, saveFormDesignSettings } from "@/actions/form";
 import {
     DndContext,
@@ -113,7 +113,7 @@ export function PropertiesPanel() {
     // Find which section contains the selected element
     const findElementSection = () => {
         for (const section of sections) {
-            if (section.elements.some(el => el.id === selectedElement?.id)) {
+            if (getSectionElements(section).some(el => el.id === selectedElement?.id)) {
                 return section.id;
             }
         }
@@ -657,7 +657,7 @@ function SortableSectionItem({
                     {section.title}
                 </p>
                 <p className="text-[10px] text-base-content/50">
-                    {section.elements.length} {section.elements.length === 1 ? 'field' : 'fields'}
+                    {getSectionElements(section).length} {getSectionElements(section).length === 1 ? 'field' : 'fields'}
                 </p>
             </div>
             

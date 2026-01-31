@@ -1,7 +1,7 @@
 "use client";
 
 import { FormElements } from "@/components/builder/FormElements";
-import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow, getSectionElements } from "@/types/form-builder";
 import { motion } from "framer-motion";
 import { LuCheck } from "react-icons/lu";
 import { getFormWrapperStyle, getButtonStyle, QUESTION_SPACING_MAP, getGoogleFontsUrl } from "@/lib/designUtils";
@@ -18,6 +18,80 @@ interface ClassicRendererProps {
     validateAllSections: () => boolean;
     setRenderKey: (key: number) => void;
     designSettings?: Partial<FormDesignSettings>;
+}
+
+// Helper to render a form element
+function FormFieldRenderer({
+    element,
+    submitValue,
+    formErrors,
+    formValues,
+    settings,
+    isHalfWidth = false,
+}: {
+    element: FormElementInstance;
+    submitValue: (key: string, value: string) => void;
+    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
+    formValues: React.MutableRefObject<{ [key: string]: string }>;
+    settings: FormDesignSettings;
+    isHalfWidth?: boolean;
+}) {
+    const FormElementDesc = FormElements[element.type];
+    if (!FormElementDesc) return null;
+
+    const FormElement = FormElementDesc.formComponent;
+    
+    return (
+        <div
+            className={isHalfWidth ? 'flex-1 min-w-0' : 'w-full'}
+            style={{
+                '--form-primary-color': settings.primaryColor,
+                '--form-text-color': settings.textColor,
+            } as React.CSSProperties}
+        >
+            <FormElement
+                element={element}
+                submitValue={submitValue}
+                isInvalid={formErrors.current[element.id]}
+                defaultValue={formValues.current[element.id]}
+            />
+        </div>
+    );
+}
+
+// Helper to render a row (1 or 2 elements side by side)
+function FormRowRenderer({
+    row,
+    submitValue,
+    formErrors,
+    formValues,
+    settings,
+}: {
+    row: FormRow;
+    submitValue: (key: string, value: string) => void;
+    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
+    formValues: React.MutableRefObject<{ [key: string]: string }>;
+    settings: FormDesignSettings;
+}) {
+    if (row.elements.length === 0) return null;
+    
+    const isSideBySide = row.elements.length === 2;
+    
+    return (
+        <div className={isSideBySide ? 'flex gap-4 md:gap-6' : ''}>
+            {row.elements.map((element) => (
+                <FormFieldRenderer
+                    key={element.id}
+                    element={element}
+                    submitValue={submitValue}
+                    formErrors={formErrors}
+                    formValues={formValues}
+                    settings={settings}
+                    isHalfWidth={isSideBySide}
+                />
+            ))}
+        </div>
+    );
 }
 
 export function ClassicRenderer({
@@ -111,59 +185,35 @@ export function ClassicRenderer({
                                         </div>
                                     )}
 
-                                    {/* Form Fields */}
+                                    {/* Form Rows */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }}>
-                                        {section.elements.map((element) => {
-                                            const FormElementDesc = FormElements[element.type];
-                                            if (!FormElementDesc) return null;
-
-                                            const FormElement = FormElementDesc.formComponent;
-                                            return (
-                                                <div 
-                                                    key={element.id}
-                                                    style={{ 
-                                                        '--form-primary-color': settings.primaryColor,
-                                                        '--form-text-color': settings.textColor,
-                                                    } as React.CSSProperties}
-                                                >
-                                                    <FormElement
-                                                        element={element}
-                                                        submitValue={submitValue}
-                                                        isInvalid={formErrors.current[element.id]}
-                                                        defaultValue={formValues.current[element.id]}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
+                                        {section.rows?.map((row) => (
+                                            <FormRowRenderer
+                                                key={row.id}
+                                                row={row}
+                                                submitValue={submitValue}
+                                                formErrors={formErrors}
+                                                formValues={formValues}
+                                                settings={settings}
+                                            />
+                                        ))}
                                     </div>
                                 </motion.div>
                             ))
                         ) : (
-                            // Flat page layout - all fields directly on the page
+                            // Flat page layout - all rows directly on the page
                             <div style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }}>
                                 {sections.flatMap((section) =>
-                                    section.elements.map((element) => {
-                                        const FormElementDesc = FormElements[element.type];
-                                        if (!FormElementDesc) return null;
-
-                                        const FormElement = FormElementDesc.formComponent;
-                                        return (
-                                            <div 
-                                                key={element.id}
-                                                style={{ 
-                                                    '--form-primary-color': settings.primaryColor,
-                                                    '--form-text-color': settings.textColor,
-                                                } as React.CSSProperties}
-                                            >
-                                                <FormElement
-                                                    element={element}
-                                                    submitValue={submitValue}
-                                                    isInvalid={formErrors.current[element.id]}
-                                                    defaultValue={formValues.current[element.id]}
-                                                />
-                                            </div>
-                                        );
-                                    })
+                                    section.rows?.map((row) => (
+                                        <FormRowRenderer
+                                            key={row.id}
+                                            row={row}
+                                            submitValue={submitValue}
+                                            formErrors={formErrors}
+                                            formValues={formValues}
+                                            settings={settings}
+                                        />
+                                    )) || []
                                 )}
                             </div>
                         )}

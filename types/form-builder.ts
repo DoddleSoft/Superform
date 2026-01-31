@@ -93,13 +93,49 @@ export type FormElementHelper = {
     label: string;
 };
 
+// Row represents a horizontal container for 1-2 elements (allows side-by-side layout)
+export interface FormRow {
+    id: string;
+    elements: FormElementInstance[]; // 1-2 elements per row
+}
+
 // Section represents a full-screen page in Typeform-like experience
 export interface FormSection {
     id: string;
     title: string;
     description?: string;
     showTitle?: boolean; // Whether to show section title to end users (default: false)
-    elements: FormElementInstance[];
+    rows: FormRow[]; // Changed from elements to rows
+}
+
+// Helper to create a new row with an element
+export function createRow(id: string, element?: FormElementInstance): FormRow {
+    return {
+        id,
+        elements: element ? [element] : [],
+    };
+}
+
+// Legacy compatibility - get all elements from a section (flattened from rows)
+export function getSectionElements(section: FormSection): FormElementInstance[] {
+    return section.rows.flatMap(row => row.elements);
+}
+
+// Helper to migrate old section format (elements) to new format (rows)
+export function migrateToRowFormat(section: any): FormSection {
+    // If already has rows, return as-is
+    if (section.rows && Array.isArray(section.rows)) {
+        return section as FormSection;
+    }
+    // Migrate from old elements array to rows (one element per row)
+    const elements: FormElementInstance[] = section.elements || [];
+    return {
+        id: section.id,
+        title: section.title || "Untitled Section",
+        description: section.description,
+        showTitle: section.showTitle,
+        rows: elements.map(element => createRow(crypto.randomUUID(), element)),
+    };
 }
 
 // Form content is now an array of sections
@@ -112,7 +148,7 @@ export function createSection(id: string, title?: string): FormSection {
         title: title || "Untitled Section",
         description: "",
         showTitle: false,
-        elements: [],
+        rows: [], // Use rows instead of elements
     };
 }
 

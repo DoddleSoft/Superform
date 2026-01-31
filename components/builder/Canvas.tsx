@@ -2,11 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useFormBuilder } from "@/context/FormBuilderContext";
-import { FormElementInstance, FormSection, CanvasTab } from "@/types/form-builder";
-import { useDroppable } from "@dnd-kit/core";
+import { FormElementInstance, FormSection, FormRow, CanvasTab, getSectionElements } from "@/types/form-builder";
+import { useDroppable, useDndContext } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { FormElements } from "./FormElements";
+import { DragIndicator, DropZoneOverlay } from "./DragIndicator";
 import { 
     LuPlus, 
     LuTrash2, 
@@ -18,7 +19,8 @@ import {
     LuZap,
     LuLayers,
     LuGripVertical,
-    LuSparkles
+    LuSparkles,
+    LuColumns2
 } from "react-icons/lu";
 import { motion, AnimatePresence, elementVariants } from "@/lib/animations";
 import { ClassicRenderer } from "@/components/renderers/ClassicRenderer";
@@ -60,7 +62,7 @@ export function Canvas() {
 
     const handleMouseDown = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
-        if (target.closest('[data-designer-element]') || target.closest('[data-section]')) return;
+        if (target.closest('[data-designer-element]') || target.closest('[data-section]') || target.closest('[data-row]')) return;
 
         setIsDragging(true);
         setStartY(e.clientY);
@@ -233,6 +235,8 @@ function SectionCard({
         sections
     } = useFormBuilder();
     const [isHovering, setIsHovering] = useState(false);
+    const { active } = useDndContext();
+    const isDraggingOver = !!active;
 
     const { setNodeRef, isOver } = useDroppable({
         id: `section-droppable-${section.id}`,
@@ -248,6 +252,9 @@ function SectionCard({
         setSelectedSection(section);
     };
 
+    // Get element count from rows
+    const elementCount = getSectionElements(section).length;
+
     return (
         <motion.div
             layout
@@ -262,7 +269,7 @@ function SectionCard({
         >
             {/* Add Section Above Button (on hover) */}
             <AnimatePresence>
-                {isHovering && (
+                {isHovering && !isDraggingOver && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -303,7 +310,7 @@ function SectionCard({
                                 {section.title || 'Untitled Section'}
                             </span>
                             <span className="text-xs text-base-content/50">
-                                {section.elements.length} {section.elements.length === 1 ? 'field' : 'fields'}
+                                {elementCount} {elementCount === 1 ? 'field' : 'fields'}
                             </span>
                         </div>
                     </div>
@@ -324,25 +331,23 @@ function SectionCard({
                     </div>
                 </div>
 
-                {/* Section Content - Elements */}
+                {/* Section Content - Rows */}
                 <div className="p-4 min-h-[100px]">
-                    {section.elements.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center text-base-content/40 border-2 border-dashed border-base-200 rounded-xl p-8 hover:border-primary/40 hover:bg-primary/5 transition-all group">
-                            <LuLayers className="w-6 h-6 mb-2 opacity-40 group-hover:opacity-60 transition-opacity" />
-                            <p className="text-sm font-medium">Drop fields here</p>
-                            <p className="text-xs text-base-content/30 mt-1">Drag elements from the sidebar</p>
-                        </div>
+                    {section.rows.length === 0 ? (
+                        <EmptyDropZone sectionId={section.id} isOver={isOver} />
                     ) : (
                         <SortableContext
-                            items={section.elements.map((el) => el.id)}
+                            items={section.rows.map((row) => row.id)}
                             strategy={verticalListSortingStrategy}
                         >
                             <div className="flex flex-col gap-3">
-                                {section.elements.map((element) => (
-                                    <SortableElement
-                                        key={element.id}
-                                        element={element}
+                                {section.rows.map((row, rowIndex) => (
+                                    <SortableRow
+                                        key={row.id}
+                                        row={row}
+                                        rowIndex={rowIndex}
                                         sectionId={section.id}
+                                        isLast={rowIndex === section.rows.length - 1}
                                     />
                                 ))}
                             </div>
@@ -353,7 +358,7 @@ function SectionCard({
 
             {/* Add Section Below Button (on hover) */}
             <AnimatePresence>
-                {isHovering && (
+                {isHovering && !isDraggingOver && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -376,6 +381,311 @@ function SectionCard({
     );
 }
 
+// Empty drop zone when section has no rows
+function EmptyDropZone({ sectionId, isOver }: { sectionId: string; isOver: boolean }) {
+    return (
+        <motion.div 
+            className={`flex flex-col items-center justify-center text-base-content/40 border-2 border-dashed rounded-xl p-8 transition-all group
+                ${isOver ? 'border-primary bg-primary/5' : 'border-base-200 hover:border-primary/40 hover:bg-primary/5'}
+            `}
+            animate={isOver ? { scale: 1.02 } : { scale: 1 }}
+        >
+            <LuLayers className={`w-6 h-6 mb-2 transition-opacity ${isOver ? 'opacity-80 text-primary' : 'opacity-40 group-hover:opacity-60'}`} />
+            <p className={`text-sm font-medium ${isOver ? 'text-primary' : ''}`}>
+                {isOver ? 'Release to drop' : 'Drop fields here'}
+            </p>
+            <p className="text-xs text-base-content/30 mt-1">Drag elements from the sidebar</p>
+        </motion.div>
+    );
+}
+
+// Sortable Row component
+function SortableRow({ 
+    row, 
+    rowIndex, 
+    sectionId, 
+    isLast 
+}: { 
+    row: FormRow; 
+    rowIndex: number; 
+    sectionId: string;
+    isLast: boolean;
+}) {
+    const { active } = useDndContext();
+    const [dropIndicator, setDropIndicator] = useState<'top' | 'bottom' | 'left' | 'right' | null>(null);
+    
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+        isOver,
+    } = useSortable({
+        id: row.id,
+        data: {
+            type: 'row',
+            row,
+            rowIndex,
+            sectionId,
+            isDesignerRow: true,
+        },
+    });
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        transition,
+    };
+
+    // Determine if we can add element to this row (max 2 elements)
+    const canAddToRow = row.elements.length < 2;
+    const isBeingDraggedOver = isOver && !!active;
+
+    // Show drag placeholder when this row is being dragged
+    if (isDragging) {
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                className="opacity-50 p-4 rounded-lg border-2 border-dashed border-primary bg-primary/5 min-h-[80px]"
+            />
+        );
+    }
+
+    return (
+        <motion.div
+            ref={setNodeRef}
+            style={style}
+            data-row
+            layout
+            variants={elementVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative"
+        >
+            {/* Top drop indicator */}
+            <AnimatePresence>
+                {isBeingDraggedOver && (
+                    <DragIndicator position="top" isVisible={true} isRow />
+                )}
+            </AnimatePresence>
+
+            {/* Row Container */}
+            <div className={`flex gap-3 ${row.elements.length === 2 ? '' : ''}`}>
+                {row.elements.map((element, elementIndex) => (
+                    <RowElement
+                        key={element.id}
+                        element={element}
+                        sectionId={sectionId}
+                        rowId={row.id}
+                        rowIndex={rowIndex}
+                        elementIndex={elementIndex}
+                        isOnlyElement={row.elements.length === 1}
+                        canAddSide={canAddToRow}
+                        dragHandleProps={{ ...attributes, ...listeners }}
+                    />
+                ))}
+            </div>
+
+            {/* Side-by-side hint for single elements */}
+            {row.elements.length === 1 && active && (
+                <SideDropTarget 
+                    sectionId={sectionId} 
+                    rowId={row.id} 
+                    rowIndex={rowIndex}
+                />
+            )}
+        </motion.div>
+    );
+}
+
+// Side drop target component for adding element side-by-side
+function SideDropTarget({ 
+    sectionId, 
+    rowId, 
+    rowIndex 
+}: { 
+    sectionId: string; 
+    rowId: string; 
+    rowIndex: number;
+}) {
+    const { setNodeRef, isOver } = useDroppable({
+        id: `side-drop-${rowId}`,
+        data: {
+            isSideDropArea: true,
+            sectionId,
+            rowId,
+            rowIndex,
+            position: 'side',
+        },
+    });
+
+    return (
+        <div 
+            ref={setNodeRef}
+            className={`absolute right-0 top-0 bottom-0 w-1/3 z-10 transition-all duration-200 ${
+                isOver ? 'opacity-100' : 'opacity-0 hover:opacity-50'
+            }`}
+        >
+            <motion.div
+                initial={false}
+                animate={isOver ? { opacity: 1, scale: 1 } : { opacity: 0.5, scale: 0.98 }}
+                className={`absolute inset-1 rounded-xl border-2 border-dashed flex items-center justify-center ${
+                    isOver 
+                        ? 'border-secondary bg-secondary/10' 
+                        : 'border-base-300 bg-base-200/50'
+                }`}
+            >
+                <div className="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                    <LuColumns2 className="w-4 h-4" />
+                    <span>{isOver ? 'Add side-by-side' : ''}</span>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// Element within a row
+function RowElement({ 
+    element, 
+    sectionId, 
+    rowId,
+    rowIndex,
+    elementIndex,
+    isOnlyElement,
+    canAddSide,
+    dragHandleProps,
+}: { 
+    element: FormElementInstance; 
+    sectionId: string;
+    rowId: string;
+    rowIndex: number;
+    elementIndex: number;
+    isOnlyElement: boolean;
+    canAddSide: boolean;
+    dragHandleProps: any;
+}) {
+    const { selectedElement, setSelectedElement, setSelectedSection } = useFormBuilder();
+    const { active } = useDndContext();
+    
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+        isOver,
+    } = useSortable({
+        id: element.id,
+        data: {
+            type: element.type,
+            element,
+            sectionId,
+            rowId,
+            rowIndex,
+            isDesignerElement: true,
+        },
+    });
+
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        transition,
+    };
+
+    const DesignerComponent = FormElements[element.type].designerComponent;
+
+    if (isDragging) {
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                className={`opacity-50 p-4 rounded-lg border-2 border-primary bg-base-100 h-[100px] shadow-lg ${
+                    isOnlyElement ? 'w-full' : 'flex-1'
+                }`}
+            />
+        );
+    }
+
+    const isSelected = selectedElement?.id === element.id;
+    const isBeingDraggedOver = isOver && !!active;
+
+    return (
+        <motion.div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            data-designer-element
+            layout
+            variants={elementVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className={`relative group bg-base-100 rounded-xl border transition-all duration-200 ${
+                isOnlyElement ? 'w-full' : 'flex-1'
+            } ${
+                isSelected
+                    ? "border-primary shadow-md ring-2 ring-primary/10"
+                    : "border-base-200 hover:border-base-300 hover:shadow-sm"
+            } ${
+                isBeingDraggedOver ? 'ring-2 ring-primary/30' : ''
+            }`}
+            onClick={(e) => {
+                e.stopPropagation();
+                setSelectedElement(element);
+                setSelectedSection(null);
+            }}
+        >
+            {/* Drop indicator when hovering */}
+            <AnimatePresence>
+                {isBeingDraggedOver && (
+                    <DragIndicator position="top" isVisible={true} />
+                )}
+            </AnimatePresence>
+
+            {/* Drag handle indicator */}
+            <div className={`absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab
+                ${isSelected ? 'opacity-100' : ''}`}>
+                <LuGripVertical className="w-4 h-4 text-base-content/30" />
+            </div>
+
+            {/* Content with left padding for drag handle */}
+            <div className="pl-8 pr-4 py-4">
+                {/* Overlay to prevent interaction with form fields during design */}
+                <div className="absolute inset-0 w-full h-full z-10" />
+                <DesignerComponent element={element} />
+            </div>
+
+            {/* Selection indicator */}
+            <AnimatePresence>
+                {isSelected && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="absolute -top-2 -right-2 flex items-center gap-1 bg-primary text-primary-content text-xs font-medium px-2 py-1 rounded-lg shadow-sm z-20"
+                    >
+                        <LuCheck className="w-3 h-3" />
+                        Selected
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Multi-column indicator for side-by-side elements */}
+            {!isOnlyElement && (
+                <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-base-200/80 rounded text-[10px] font-medium text-base-content/50">
+                    <LuColumns2 className="w-3 h-3" />
+                    {elementIndex === 0 ? 'L' : 'R'}
+                </div>
+            )}
+        </motion.div>
+    );
+}
+
+// Legacy SortableElement - Keep for backward compatibility during transition
 function SortableElement({ element, sectionId }: { element: FormElementInstance; sectionId: string }) {
     const { selectedElement, setSelectedElement, setSelectedSection } = useFormBuilder();
     const {

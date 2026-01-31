@@ -1,11 +1,101 @@
 "use client";
 
 import { FormElements } from "@/components/builder/FormElements";
-import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "@/types/form-builder";
+import { FormElementInstance, FormSection, FormDesignSettings, DEFAULT_DESIGN_SETTINGS, FormRow } from "@/types/form-builder";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuChevronLeft, LuChevronRight, LuCheck, LuArrowDown, LuChevronDown } from "react-icons/lu";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getFormWrapperStyle, getButtonStyle, QUESTION_SPACING_MAP, getGoogleFontsUrl, FONT_FAMILY_MAP } from "@/lib/designUtils";
+
+interface TypeformRendererProps {
+    sections: FormSection[];
+    formValues: React.MutableRefObject<{ [key: string]: string }>;
+    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
+    renderKey: number;
+    pending: boolean;
+    submitValue: (key: string, value: string) => void;
+    handleSubmit: () => void;
+    validateSection: (sectionIndex: number) => boolean;
+    setRenderKey: (key: number) => void;
+    // Optional props for controlled mode (preview)
+    currentSectionIndex?: number;
+    onSectionChange?: (index: number) => void;
+    designSettings?: Partial<FormDesignSettings>;
+}
+
+// Helper to render a form element
+function TypeformFieldRenderer({
+    element,
+    submitValue,
+    formErrors,
+    formValues,
+    settings,
+    isHalfWidth = false,
+}: {
+    element: FormElementInstance;
+    submitValue: (key: string, value: string) => void;
+    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
+    formValues: React.MutableRefObject<{ [key: string]: string }>;
+    settings: FormDesignSettings;
+    isHalfWidth?: boolean;
+}) {
+    const FormElementDesc = FormElements[element.type];
+    if (!FormElementDesc) return null;
+
+    const FormElement = FormElementDesc.formComponent;
+    
+    return (
+        <div
+            className={`group ${isHalfWidth ? 'flex-1 min-w-0' : 'w-full'}`}
+            style={{
+                '--form-primary-color': settings.primaryColor,
+                '--form-text-color': settings.textColor,
+            } as React.CSSProperties}
+        >
+            <FormElement
+                element={element}
+                submitValue={submitValue}
+                isInvalid={formErrors.current[element.id]}
+                defaultValue={formValues.current[element.id]}
+            />
+        </div>
+    );
+}
+
+// Helper to render a row (1 or 2 elements side by side)
+function TypeformRowRenderer({
+    row,
+    submitValue,
+    formErrors,
+    formValues,
+    settings,
+}: {
+    row: FormRow;
+    submitValue: (key: string, value: string) => void;
+    formErrors: React.MutableRefObject<{ [key: string]: boolean }>;
+    formValues: React.MutableRefObject<{ [key: string]: string }>;
+    settings: FormDesignSettings;
+}) {
+    if (row.elements.length === 0) return null;
+    
+    const isSideBySide = row.elements.length === 2;
+    
+    return (
+        <div className={isSideBySide ? 'flex gap-4 md:gap-6' : 'w-full'}>
+            {row.elements.map((element) => (
+                <TypeformFieldRenderer
+                    key={element.id}
+                    element={element}
+                    submitValue={submitValue}
+                    formErrors={formErrors}
+                    formValues={formValues}
+                    settings={settings}
+                    isHalfWidth={isSideBySide}
+                />
+            ))}
+        </div>
+    );
+}
 
 interface TypeformRendererProps {
     sections: FormSection[];
@@ -252,32 +342,18 @@ export function TypeformRenderer({
                                 </div>
                             )}
 
-                            {/* Form Fields Area */}
+                            {/* Form Fields Area - Using Rows */}
                             <div key={renderKey} style={{ display: 'flex', flexDirection: 'column', gap: questionSpacing }} className="w-full">
-                                {currentSection.elements.map((element) => {
-                                    const FormElementDesc = FormElements[element.type];
-                                    if (!FormElementDesc) return null;
-
-                                    const FormElement = FormElementDesc.formComponent;
-                                    return (
-                                        <div 
-                                            key={element.id} 
-                                            className="w-full group"
-                                            style={{ 
-                                                '--form-primary-color': settings.primaryColor,
-                                                '--form-text-color': settings.textColor,
-                                            } as React.CSSProperties}
-                                        >
-                                            {/* We might pass a special prop here in future for Typeform-specific styling if we modify the components directly */}
-                                            <FormElement
-                                                element={element}
-                                                submitValue={submitValue}
-                                                isInvalid={formErrors.current[element.id]}
-                                                defaultValue={formValues.current[element.id]}
-                                            />
-                                        </div>
-                                    );
-                                })}
+                                {currentSection.rows?.map((row) => (
+                                    <TypeformRowRenderer
+                                        key={row.id}
+                                        row={row}
+                                        submitValue={submitValue}
+                                        formErrors={formErrors}
+                                        formValues={formValues}
+                                        settings={settings}
+                                    />
+                                ))}
                             </div>
 
                             {/* Action Area */}

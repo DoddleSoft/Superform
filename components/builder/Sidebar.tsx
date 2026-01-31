@@ -90,7 +90,7 @@ export function Sidebar() {
     // Get the section to add to - use current section or first section as fallback
     const targetSectionId = currentSectionId ?? sections[0]?.id ?? "";
     const targetSection = sections.find(s => s.id === targetSectionId);
-    const currentElementCount = targetSection?.elements.length ?? 0;
+    const currentRowCount = targetSection?.rows.length ?? 0;
 
     return (
         <div className="h-full bg-base-100 flex flex-col overflow-hidden">
@@ -129,7 +129,7 @@ export function Sidebar() {
                                         onAdd={() => {
                                             if (!targetSectionId) return;
                                             const newElement = FormElements[type].construct(crypto.randomUUID());
-                                            addElement(targetSectionId, currentElementCount, newElement);
+                                            addElement(targetSectionId, currentRowCount, newElement);
                                         }}
                                     />
                                 </motion.div>

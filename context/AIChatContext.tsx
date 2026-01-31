@@ -20,7 +20,7 @@ import {
     ChatSession,
 } from "@/actions/chat";
 import { useFormBuilder } from "./FormBuilderContext";
-import { FormElementType, FormElementInstance, FormSection, createSection } from "@/types/form-builder";
+import { FormElementType, FormElementInstance, FormSection, createSection, FormRow, createRow, getSectionElements } from "@/types/form-builder";
 import {
     GeneratedFormElement,
     DeleteFieldsInput,
@@ -131,7 +131,8 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         id: section.id,
                         title: section.title,
                         description: section.description,
-                        elements: section.elements.map((el) => ({
+                        // Flatten rows to elements for AI context
+                        elements: getSectionElements(section).map((el) => ({
                             id: el.id,
                             type: el.type,
                             extraAttributes: el.extraAttributes,
@@ -275,22 +276,25 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 extraAttributes: el.extraAttributes,
             }));
 
+            // Convert elements to rows (one element per row)
+            const newRows: FormRow[] = newElements.map((el) => createRow(crypto.randomUUID(), el));
+
             // Add to current section (or first section if no current)
             const targetSectionId = currentSectionId ?? currentSections[0]?.id;
             if (!targetSectionId) {
                 // Create a default section if none exists
                 const newSection = createSection(crypto.randomUUID(), "Section 1");
-                newSection.elements = newElements;
+                newSection.rows = newRows;
                 setSections([newSection]);
                 return;
             }
 
-            // Add elements to the target section
+            // Add rows to the target section
             const updatedSections = currentSections.map((section) => {
                 if (section.id === targetSectionId) {
                     return {
                         ...section,
-                        elements: [...section.elements, ...newElements],
+                        rows: [...section.rows, ...newRows],
                     };
                 }
                 return section;
@@ -303,7 +307,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
     // Helper to find which section an element belongs to
     const findElementSection = useCallback(
         (elementId: string, sections: FormSection[]): FormSection | undefined => {
-            return sections.find((s) => s.elements.some((el) => el.id === elementId));
+            return sections.find((s) => getSectionElements(s).some((el) => el.id === elementId));
         },
         []
     );
@@ -322,6 +326,9 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         extraAttributes: el.extraAttributes,
                     }));
                     
+                    // Convert elements to rows (one element per row)
+                    const newRows: FormRow[] = newElements.map((el) => createRow(crypto.randomUUID(), el));
+                    
                     // Determine target section
                     let targetSectionId = action.sectionId;
                     
@@ -339,7 +346,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                     if (!targetSectionId) {
                         // No sections, create one
                         const newSection = createSection(crypto.randomUUID(), "Section 1");
-                        newSection.elements = newElements;
+                        newSection.rows = newRows;
                         const result = [newSection];
                         if (!existingSections) setSections(result);
                         return result;
@@ -349,22 +356,23 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         if (section.id === targetSectionId) {
                             // If insertAfterFieldId is specified, insert at that position
                             if (action.insertAfterFieldId) {
-                                const insertIndex = section.elements.findIndex(
-                                    (el) => el.id === action.insertAfterFieldId
+                                // Find the row containing the insertAfterFieldId
+                                const insertRowIndex = section.rows.findIndex(
+                                    (row) => row.elements.some((el) => el.id === action.insertAfterFieldId)
                                 );
-                                if (insertIndex !== -1) {
-                                    const before = section.elements.slice(0, insertIndex + 1);
-                                    const after = section.elements.slice(insertIndex + 1);
+                                if (insertRowIndex !== -1) {
+                                    const before = section.rows.slice(0, insertRowIndex + 1);
+                                    const after = section.rows.slice(insertRowIndex + 1);
                                     return {
                                         ...section,
-                                        elements: [...before, ...newElements, ...after],
+                                        rows: [...before, ...newRows, ...after],
                                     };
                                 }
                             }
                             // Default: append to end
                             return {
                                 ...section,
-                                elements: [...section.elements, ...newElements],
+                                rows: [...section.rows, ...newRows],
                             };
                         }
                         return section;
@@ -375,9 +383,14 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 case "deleteFields": {
                     const result = workingSections.map((section) => ({
                         ...section,
-                        elements: section.elements.filter(
-                            (el) => !action.fieldIds.includes(el.id)
-                        ),
+                        rows: section.rows
+                            .map((row) => ({
+                                ...row,
+                                elements: row.elements.filter(
+                                    (el) => !action.fieldIds.includes(el.id)
+                                ),
+                            }))
+                            .filter((row) => row.elements.length > 0), // Remove empty rows
                     }));
                     if (!existingSections) {
                         setSections(result);
@@ -391,21 +404,24 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 case "updateField": {
                     const result = workingSections.map((section) => ({
                         ...section,
-                        elements: section.elements.map((el) => {
-                            if (el.id === action.fieldId) {
-                                return {
-                                    ...el,
-                                    type: action.updates.type
-                                        ? (action.updates.type as FormElementType)
-                                        : el.type,
-                                    extraAttributes: {
-                                        ...el.extraAttributes,
-                                        ...action.updates.extraAttributes,
-                                    },
-                                };
-                            }
-                            return el;
-                        }),
+                        rows: section.rows.map((row) => ({
+                            ...row,
+                            elements: row.elements.map((el) => {
+                                if (el.id === action.fieldId) {
+                                    return {
+                                        ...el,
+                                        type: action.updates.type
+                                            ? (action.updates.type as FormElementType)
+                                            : el.type,
+                                        extraAttributes: {
+                                            ...el.extraAttributes,
+                                            ...action.updates.extraAttributes,
+                                        },
+                                    };
+                                }
+                                return el;
+                            }),
+                        })),
                     }));
                     if (!existingSections) {
                         setSections(result);
@@ -433,7 +449,8 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         id: section.id || crypto.randomUUID(),
                         title: section.title || "Untitled Section",
                         description: section.description,
-                        elements: section.elements.map((el) => ({
+                        // Convert elements array to rows (one element per row)
+                        rows: section.elements.map((el) => createRow(crypto.randomUUID(), {
                             id: el.id || crypto.randomUUID(),
                             type: el.type as FormElementType,
                             extraAttributes: el.extraAttributes,
@@ -449,22 +466,26 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 case "reorderFields": {
                     const result = workingSections.map((section) => {
                         if (section.id === action.sectionId) {
+                            // Get all elements from the section
+                            const allElements = getSectionElements(section);
                             const reorderedElements: FormElementInstance[] = [];
+                            
                             for (const fieldId of action.fieldIds) {
-                                const element = section.elements.find((el) => el.id === fieldId);
+                                const element = allElements.find((el) => el.id === fieldId);
                                 if (element) {
                                     reorderedElements.push(element);
                                 }
                             }
                             // Add any elements not in the reorder list at the end
-                            for (const el of section.elements) {
+                            for (const el of allElements) {
                                 if (!action.fieldIds.includes(el.id)) {
                                     reorderedElements.push(el);
                                 }
                             }
+                            // Convert back to rows (one element per row for simplicity)
                             return {
                                 ...section,
-                                elements: reorderedElements,
+                                rows: reorderedElements.map((el) => createRow(crypto.randomUUID(), el)),
                             };
                         }
                         return section;
