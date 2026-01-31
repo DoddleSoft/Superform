@@ -256,19 +256,6 @@ function Toolbar({
     return (
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-b border-base-200 bg-base-100">
             <div className="flex items-center gap-3 flex-wrap">
-                {/* Realtime Status Indicator */}
-                <div 
-                    className="flex items-center gap-1.5 tooltip tooltip-bottom" 
-                    data-tip={isRealtimeConnected ? "Live updates enabled" : "Connecting..."}
-                >
-                    <LuRadio className={`w-4 h-4 ${isRealtimeConnected ? 'text-success animate-pulse' : 'text-base-content/30'}`} />
-                    <span className={`text-xs font-medium ${isRealtimeConnected ? 'text-success' : 'text-base-content/40'}`}>
-                        {isRealtimeConnected ? 'Live' : '...'}
-                    </span>
-                </div>
-
-                <div className="h-5 w-px bg-base-200 hidden sm:block" />
-
                 {/* Version Filter */}
                 <VersionFilter
                     versions={availableVersions}
@@ -302,6 +289,17 @@ function Toolbar({
                 <span className="text-sm text-base-content/50 font-medium">
                     {totalCount} {totalCount === 1 ? "response" : "responses"}
                 </span>
+
+                {/* Realtime Status Indicator */}
+                <div 
+                    className="flex items-center gap-1.5 tooltip tooltip-right" 
+                    data-tip={isRealtimeConnected ? "Realtime updates enabled" : "Connecting to realtime..."}
+                >
+                    <LuRadio className={`w-4 h-4 ${isRealtimeConnected ? 'text-success animate-pulse' : 'text-base-content/30'}`} />
+                    <span className={`text-xs font-medium ${isRealtimeConnected ? 'text-success' : 'text-base-content/40'}`}>
+                        {isRealtimeConnected ? 'Live' : '...'}
+                    </span>
+                </div>
             </div>
 
             <div className="flex items-center gap-2">
