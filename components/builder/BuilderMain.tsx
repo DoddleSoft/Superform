@@ -61,9 +61,9 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             }
             // Set form metadata including style and versioning info
             setFormMetadata(
-                form.id, 
-                form.published, 
-                form.share_url, 
+                form.id,
+                form.published,
+                form.share_url,
                 form.style || 'classic',
                 {
                     currentVersion: form.current_version || 1,
@@ -112,13 +112,13 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
         if (!over) return;
 
         const overId = String(over.id);
-        
+
         // Drop Sidebar Element -> Section Drop Area
         if (active.data.current?.isDesignerBtnElement && over.data.current?.isDesignerDropArea) {
             const type = active.data.current.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
             const sectionId = over.data.current.sectionId;
-            
+
             if (sectionId) {
                 const section = sections.find(s => s.id === sectionId);
                 addElement(sectionId, section?.elements.length || 0, newElement);
@@ -131,11 +131,11 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             const type = active.data.current.type as FormElementType;
             const newElement = FormElements[type].construct(crypto.randomUUID());
             const sectionId = over.data.current.sectionId;
-            
+
             if (sectionId) {
                 const section = sections.find(s => s.id === sectionId);
                 const overElementIndex = section?.elements.findIndex(el => el.id === over.id) ?? -1;
-                
+
                 if (overElementIndex !== -1) {
                     addElement(sectionId, overElementIndex, newElement);
                 } else {
@@ -180,7 +180,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
         if (active.data.current?.isDesignerElement && over.data.current?.isDesignerDropArea) {
             const fromSectionId = active.data.current.sectionId;
             const toSectionId = over.data.current.sectionId;
-            
+
             if (fromSectionId !== toSectionId && toSectionId) {
                 const toSection = sections.find(s => s.id === toSectionId);
                 moveElement(fromSectionId, toSectionId, String(active.id), toSection?.elements.length || 0);
@@ -253,7 +253,7 @@ function BuilderContent({
                 formName={formName}
             />
 
-            <div className="flex-1 flex overflow-hidden relative">
+            <div className="flex-1 flex overflow-hidden relative min-w-0">
                 <AnimatePresence mode="wait">
                     {activeTab === "build" && (
                         <motion.div
@@ -315,7 +315,7 @@ function BuilderContent({
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className="flex-1 h-full"
+                            className="flex-1 h-full min-w-0"
                         >
                             <ResultsView submissions={submissions} />
                         </motion.div>
