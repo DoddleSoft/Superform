@@ -89,6 +89,16 @@ export function DashboardContent() {
                 }),
                 getFormStats(currentWorkspace.id),
             ]);
+            
+            // Handle case where current page is now empty but forms exist on other pages
+            // (e.g., after deleting the last form on page 2)
+            if (formsResult.data.length === 0 && formsResult.total > 0 && page > 1) {
+                // Calculate the correct page to navigate to
+                const lastValidPage = Math.ceil(formsResult.total / PAGE_SIZE);
+                setPage(Math.min(page - 1, lastValidPage));
+                return; // The page change will trigger a new fetch
+            }
+            
             setFormsData(formsResult);
             setStats(statsResult);
         } catch (err: any) {
