@@ -102,6 +102,7 @@ export function PropertiesPanel() {
         selectedSection,
         setSelectedSection,
         updateSection,
+        removeSection,
         reorderSections,
         formStyle,
         setFormStyle,
@@ -283,6 +284,11 @@ export function PropertiesPanel() {
                         section={selectedSection} 
                         onClose={() => setSelectedSection(null)}
                         onUpdate={(updates) => updateSection(selectedSection.id, updates)}
+                        onDelete={() => {
+                            removeSection(selectedSection.id);
+                            setSelectedSection(null);
+                        }}
+                        canDelete={sections.length > 1}
                     />
                 ) : isThankYouPageSelected ? (
                     // Thank You Page Properties View
@@ -304,11 +310,15 @@ export function PropertiesPanel() {
 function SectionPropertiesView({ 
     section, 
     onClose, 
-    onUpdate 
+    onUpdate,
+    onDelete,
+    canDelete,
 }: { 
     section: FormSection; 
     onClose: () => void;
     onUpdate: (updates: Partial<Omit<FormSection, "id" | "elements">>) => void;
+    onDelete: () => void;
+    canDelete: boolean;
 }) {
     return (
         <motion.div
@@ -384,6 +394,19 @@ function SectionPropertiesView({
                     </div>
                 </div>
             </div>
+
+            {/* Footer Actions */}
+            {canDelete && (
+                <div className="p-3 border-t border-base-200 bg-base-100/80 backdrop-blur shrink-0">
+                    <button
+                        className="btn btn-ghost btn-sm w-full gap-2 text-error hover:bg-error/10"
+                        onClick={onDelete}
+                    >
+                        <LuTrash2 className="w-4 h-4" />
+                        Delete Section
+                    </button>
+                </div>
+            )}
         </motion.div>
     );
 }
@@ -657,7 +680,7 @@ function SectionListView() {
 function SortableSectionItem({ 
     section, 
     index,
-    onClick
+    onClick,
 }: { 
     section: FormSection; 
     index: number;
@@ -714,7 +737,7 @@ function SortableSectionItem({
                     {getSectionElements(section).length} {getSectionElements(section).length === 1 ? 'field' : 'fields'}
                 </p>
             </div>
-            
+
             <LuSettings className="w-3.5 h-3.5 text-base-content/30 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
     );
