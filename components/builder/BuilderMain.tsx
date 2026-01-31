@@ -27,6 +27,8 @@ import { ResultsView } from "./ResultsView";
 import { AIChatProvider } from "@/context/AIChatContext";
 import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
+import { FormSetupModal } from "./FormSetupModal";
+import { useSearchParams } from "next/navigation";
 
 export function BuilderMain({ form, submissions }: { form: any, submissions: FormSubmission[] }) {
     const { sections, addElement, addElementToRow, setSections, setFormMetadata, setFormStyle, formId, addSection, moveElement } = useFormBuilder();
@@ -34,6 +36,58 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
     const [activeElementSectionId, setActiveElementSectionId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"build" | "results">("build");
+    const [localFormName, setLocalFormName] = useState(form.name);
+
+    // Only verify "new" param once to prevent modal loops
+    const searchParams = useSearchParams();
+    const shouldShowSetup = searchParams.get("new") === "true";
+    const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
+    const [hasCheckedNewParam, setHasCheckedNewParam] = useState(false);
+
+    useEffect(() => {
+        if (!hasCheckedNewParam && shouldShowSetup) {
+            setIsSetupModalOpen(true);
+            setHasCheckedNewParam(true);
+        }
+    }, [shouldShowSetup, hasCheckedNewParam]);
+
+    const handleFormUpdate = (name: string, description: string) => {
+        // Update local context state
+        // The setFormMetadata update happens in the modal via action, 
+        // but we can force a refresh if needed or trust the action to handle database
+        // and let auto-save pick up subsequent changes.
+        // Actually, for immediate UI feedback we should rely on the action's success.
+        // But we might want to update the header title immediately.
+        // The BuilderHeader likely reads from form context or prop.
+        // If it reads from context, we need to update context.
+        setFormMetadata(
+            form.id,
+            form.published,
+            form.share_url,
+            form.style || 'classic',
+            form.design_settings ? { ...DEFAULT_DESIGN_SETTINGS, ...form.design_settings } : DEFAULT_DESIGN_SETTINGS,
+            {
+                currentVersion: form.current_version || 1,
+                publishedAt: form.published_at || null,
+            },
+            // Just pass existing snapshot as we didn't change content
+            {
+                content: form.published_content,
+                style: form.published_style,
+                designSettings: form.published_design_settings
+                    ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings }
+                    : null,
+            }
+        );
+        // FORCE RELOAD to get new name in server component wrapper if needed, 
+        // but better to update client state if possible.
+        // For now, let's just close modal. The header might not update immediately if it uses prop.
+        // Let's pass the new name to BuilderContent or update it via router.refresh() 
+        // but router.refresh() might be heavy.
+
+        // Actually, BuilderMain takes `form` as prop. 
+        // We might need strict local state for the name if we want instant update without refresh.
+    };
 
     // Auto-save hook - now saves sections instead of elements
     const { saveStatus, lastSavedAt, error: saveError } = useAutoSave({
@@ -47,7 +101,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             // Handle both old format (flat array) and new format (sections with rows)
             const content = form.content || [];
             let sectionsToSet: FormSection[];
-            
+
             if (Array.isArray(content) && content.length > 0) {
                 // Check if it's the new section format
                 if (content[0]?.rows !== undefined || content[0]?.elements !== undefined) {
@@ -67,22 +121,22 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 const defaultSection = createSection(crypto.randomUUID(), "Section 1");
                 sectionsToSet = [defaultSection];
             }
-            
+
             setSections(sectionsToSet);
-            
+
             // Build published snapshot for diff comparison
             const publishedSnapshot = form.published ? {
                 content: form.published_content,
                 style: form.published_style,
-                designSettings: form.published_design_settings 
-                    ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings } 
+                designSettings: form.published_design_settings
+                    ? { ...DEFAULT_DESIGN_SETTINGS, ...form.published_design_settings }
                     : null,
             } : {
                 content: null,
                 style: null,
                 designSettings: null,
             };
-            
+
             // Set form metadata including style, versioning info, and published snapshot
             setFormMetadata(
                 form.id,
@@ -208,12 +262,12 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
             if (fromSectionId === toSectionId && activeRowId !== overRowId) {
                 setSections(prev => prev.map(section => {
                     if (section.id !== fromSectionId) return section;
-                    
+
                     const oldIndex = section.rows.findIndex(r => r.id === activeRowId);
                     const newIndex = section.rows.findIndex(r => r.id === overRowId);
-                    
+
                     if (oldIndex === -1 || newIndex === -1) return section;
-                    
+
                     return {
                         ...section,
                         rows: arrayMove(section.rows, oldIndex, newIndex)
@@ -294,8 +348,18 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                 submissions={submissions}
                 saveStatus={saveStatus}
                 lastSavedAt={lastSavedAt}
-                formName={form.name}
+                formName={localFormName} // Use local state for immediate updates
             />
+            {isSetupModalOpen && (
+                <FormSetupModal
+                    formId={form.id}
+                    defaultName={form.name}
+                    onClose={() => setIsSetupModalOpen(false)}
+                    onUpdate={(name, desc) => {
+                        setLocalFormName(name);
+                    }}
+                />
+            )}
         </AIChatProvider>
     );
 }

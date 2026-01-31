@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { LuEllipsis, LuPencil, LuCopy, LuTrash2, LuExternalLink, LuSquarePen } from "react-icons/lu";
@@ -38,6 +39,28 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
     const gradient = gradients[getGradientIndex(form.name)];
     const hasGradient = form.published; // Only published forms get colorful backgrounds
 
+    const [isTop, setIsTop] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLUListElement>(null);
+
+    const checkPosition = () => {
+        if (!dropdownRef.current) return;
+
+        const dropdownRect = dropdownRef.current.getBoundingClientRect();
+        const spaceAbove = dropdownRect.top;
+
+        // Estimate menu height if not visible yet (approx 260px for the menu)
+        // or use actual height if customized
+        const menuHeight = 260;
+
+        // If there's enough space above, show it on top
+        if (spaceAbove > menuHeight + 20) {
+            setIsTop(true);
+        } else {
+            setIsTop(false);
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -48,11 +71,10 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
         >
             <Link href={`/builder/${form.id}`} className="block">
                 <div
-                    className={`relative overflow-hidden rounded-2xl aspect-[4/3] transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.02] ${
-                        hasGradient
-                            ? `bg-gradient-to-br ${gradient}`
-                            : "bg-base-100 border border-base-200"
-                    }`}
+                    className={`relative overflow-hidden rounded-2xl aspect-[4/3] transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.02] ${hasGradient
+                        ? `bg-gradient-to-br ${gradient}`
+                        : "bg-base-100 border border-base-200"
+                        }`}
                 >
                     {/* Decorative wave shape for gradient cards */}
                     {hasGradient && (
@@ -73,9 +95,8 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                     {/* Title centered in card */}
                     <div className="absolute inset-0 flex items-center justify-center p-6">
                         <h3
-                            className={`text-lg font-semibold text-center line-clamp-3 ${
-                                hasGradient ? "text-white drop-shadow-sm" : "text-base-content"
-                            }`}
+                            className={`text-lg font-semibold text-center line-clamp-3 ${hasGradient ? "text-white drop-shadow-sm" : "text-base-content"
+                                }`}
                         >
                             {form.name}
                         </h3>
@@ -98,25 +119,34 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                     {form.submission_count === 0
                         ? "No responses"
                         : form.submission_count === 1
-                        ? "1 response"
-                        : `${form.submission_count} responses`}
+                            ? "1 response"
+                            : `${form.submission_count} responses`}
                 </span>
 
                 {/* Dropdown menu */}
-                <div className="dropdown dropdown-end">
+                <div
+                    className={`dropdown dropdown-end ${isTop ? 'dropdown-top' : 'dropdown-bottom'}`}
+                    ref={dropdownRef}
+                >
                     <label
                         tabIndex={0}
-                        className="p-1.5 rounded-lg text-base-content/40 hover:text-base-content hover:bg-base-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                        onClick={(e) => e.preventDefault()}
+                        className="p-1.5 rounded-lg text-base-content/40 hover:text-base-content hover:bg-base-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer block"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            checkPosition();
+                        }}
+                        onMouseEnter={checkPosition}
+                        onTouchStart={checkPosition}
                     >
                         <LuEllipsis className="w-4 h-4" />
                     </label>
                     <ul
                         tabIndex={0}
+                        ref={menuRef}
                         className="dropdown-content mt-2 p-1.5 shadow-lg bg-base-100 rounded-xl w-48 z-10 border border-base-200"
                     >
                         <li>
-                            <Link 
+                            <Link
                                 href={`/builder/${form.id}`}
                                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
                             >
@@ -137,7 +167,7 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                             </li>
                         )}
                         <li>
-                            <button 
+                            <button
                                 onClick={() => onEdit(form)}
                                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
                             >
@@ -146,7 +176,7 @@ export function FormCard({ form, index = 0, onEdit, onDuplicate, onDelete }: For
                             </button>
                         </li>
                         <li>
-                            <button 
+                            <button
                                 onClick={() => onDuplicate(form)}
                                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-base-200 transition-colors"
                             >
