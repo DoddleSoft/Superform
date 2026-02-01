@@ -25,6 +25,7 @@ import { BuilderHeader } from "./BuilderHeader";
 import { FormElements } from "./FormElements";
 import { ResultsView } from "./ResultsView";
 import { SettingsView } from "./SettingsView";
+import { AnalyticsView } from "./AnalyticsView";
 import { AIChatProvider } from "@/context/AIChatContext";
 import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
 import { motion, AnimatePresence, tabContentVariants } from "@/lib/animations";
@@ -36,7 +37,7 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
     const [activeSidebarElement, setActiveSidebarElement] = useState<FormElementType | null>(null);
     const [activeCanvasElement, setActiveCanvasElement] = useState<FormElementInstance | null>(null);
     const [activeElementSectionId, setActiveElementSectionId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"build" | "settings" | "results">("build");
+    const [activeTab, setActiveTab] = useState<"build" | "settings" | "analytics" | "results">("build");
     const [localFormName, setLocalFormName] = useState(form.name);
 
     // Only verify "new" param once to prevent modal loops
@@ -389,8 +390,8 @@ function BuilderContent({
     lastSavedAt,
     formName,
 }: {
-    activeTab: "build" | "settings" | "results";
-    setActiveTab: (tab: "build" | "settings" | "results") => void;
+    activeTab: "build" | "settings" | "analytics" | "results";
+    setActiveTab: (tab: "build" | "settings" | "analytics" | "results") => void;
     sensors: ReturnType<typeof useSensors>;
     onDragStart: (event: DragStartEvent) => void;
     onDragEnd: (event: DragEndEvent) => void;
@@ -476,6 +477,19 @@ function BuilderContent({
                             className="flex-1 h-full min-w-0"
                         >
                             <SettingsView />
+                        </motion.div>
+                    )}
+
+                    {activeTab === "analytics" && (
+                        <motion.div
+                            key="analytics"
+                            variants={tabContentVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="flex-1 h-full min-w-0"
+                        >
+                            <AnalyticsView submissions={submissions} />
                         </motion.div>
                     )}
 

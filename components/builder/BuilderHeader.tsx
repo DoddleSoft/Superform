@@ -35,8 +35,8 @@ export function BuilderHeader({
     lastSavedAt,
     formName,
 }: {
-    activeTab: "build" | "settings" | "results";
-    onTabChange: (tab: "build" | "settings" | "results") => void;
+    activeTab: "build" | "settings" | "analytics" | "results";
+    onTabChange: (tab: "build" | "settings" | "analytics" | "results") => void;
     saveStatus: SaveStatus;
     lastSavedAt: Date | null;
     formName?: string;
@@ -158,7 +158,8 @@ export function BuilderHeader({
     const tabs = [
         { id: "build", label: "Build", icon: LuPenTool },
         { id: "settings", label: "Settings", icon: LuSettings },
-        { id: "results", label: "Results", icon: LuChartBar },
+        { id: "analytics", label: "Analytics", icon: LuChartBar },
+        { id: "results", label: "Results", icon: LuEye },
     ];
 
     return (
@@ -251,7 +252,7 @@ export function BuilderHeader({
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => onTabChange(tab.id as "build" | "settings" | "results")}
+                                    onClick={() => onTabChange(tab.id as "build" | "settings" | "analytics" | "results")}
                                     className={`
                                         flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium
                                         rounded-full transition-all duration-200
