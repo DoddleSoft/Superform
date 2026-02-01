@@ -198,6 +198,10 @@ export interface Form {
     published_at: string | null; // When last published
     current_version: number; // Current published version (0 = never published)
     has_unpublished_changes: boolean; // True if draft differs from published
+    // Optional flexible settings bag for things like notifications, access control, webhooks, etc.
+    settings?: Record<string, any> | null;
+    // Snapshot of published settings
+    published_settings?: Record<string, any> | null;
 }
 
 // Form version for version history

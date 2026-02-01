@@ -17,6 +17,7 @@ import {
     saveChatMessage,
     clearChatHistory,
     markActionsApplied,
+    saveAIThought,
     ChatSession,
 } from "@/actions/chat";
 import { useFormBuilder } from "./FormBuilderContext";
@@ -54,7 +55,7 @@ export type FormToolAction =
     | { type: "updateThankYouPage"; settings: Partial<ThankYouPageSettings> };
 
 // Workflow step types for agentic behavior
-export type WorkflowStep = "fields" | "sections" | "style" | "design" | "thankYou";
+export type WorkflowStep = "structure" | "style" | "design" | "thankYou" | "complete";
 
 interface AIChatContextType {
     // Sidebar visibility
@@ -66,6 +67,7 @@ interface AIChatContextType {
     // Chat state from useChat
     messages: any[];
     sendMessage: (options: { text: string }) => void;
+    continueWorkflow: (completedStep: WorkflowStep) => void;
     status: "ready" | "submitted" | "streaming" | "error";
     error: Error | undefined;
     stop: () => void;
@@ -87,6 +89,7 @@ interface AIChatContextType {
     
     // Agentic workflow
     denyChanges: (messageId: string, actions: FormToolAction[]) => void;
+    currentWorkflowStep: WorkflowStep;
 }
 
 const AIChatContext = createContext<AIChatContextType | null>(null);
@@ -110,6 +113,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
     const [isLoadingSession, setIsLoadingSession] = useState(true);
     const [isSessionReady, setIsSessionReady] = useState(false);
     const [appliedMessageIds, setAppliedMessageIds] = useState<Set<string>>(new Set());
+    const [currentWorkflowStep, setCurrentWorkflowStep] = useState<WorkflowStep>("structure");
 
     const { 
         setSections, 
@@ -150,11 +154,22 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         initSession();
     }, [formId]);
 
-    // Create a ref to hold the current sections for use in the fetch function
+    // Create refs for use in fetch function
     const currentSectionsRef = useRef(currentSections);
+    const formStyleRef = useRef(formStyle);
+    const currentWorkflowStepRef = useRef(currentWorkflowStep);
+    
     useEffect(() => {
         currentSectionsRef.current = currentSections;
     }, [currentSections]);
+    
+    useEffect(() => {
+        formStyleRef.current = formStyle;
+    }, [formStyle]);
+    
+    useEffect(() => {
+        currentWorkflowStepRef.current = currentWorkflowStep;
+    }, [currentWorkflowStep]);
 
     // Create a custom transport that includes the current form state
     const transport = useRef(
@@ -162,8 +177,15 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
             api: "/api/chat",
             body: { formId },
             fetch: async (url, options) => {
-                // Parse the original body and add current form state
                 const originalBody = JSON.parse(options?.body as string || "{}");
+                
+                // Determine pending step based on current workflow
+                let pendingStep: "style" | "design" | "thankYou" | undefined;
+                const step = currentWorkflowStepRef.current;
+                if (step === "style") pendingStep = "style";
+                else if (step === "design") pendingStep = "design";
+                else if (step === "thankYou") pendingStep = "thankYou";
+                
                 const enhancedBody = {
                     ...originalBody,
                     formId,
@@ -172,17 +194,20 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                         title: section.title,
                         description: section.description,
                         showTitle: section.showTitle,
-                        // Include row info for side-by-side understanding
-                        elements: section.rows.flatMap((row, rowIndex) => 
+                        elements: section.rows.flatMap((row) => 
                             row.elements.map((el, elIndex) => ({
                                 id: el.id,
                                 type: el.type,
                                 extraAttributes: el.extraAttributes,
                                 rowId: row.id,
-                                rowPosition: elIndex, // 0 = first in row, 1 = second (side-by-side)
+                                rowPosition: elIndex,
                             }))
                         ),
                     })),
+                    workflowContext: pendingStep ? {
+                        pendingStep,
+                        formStyle: formStyleRef.current,
+                    } : undefined,
                 };
                 return fetch(url, {
                     ...options,
@@ -227,17 +252,54 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
                 
                 // Store mapping from client ID to database ID
                 messageIdMap.current.set(message.id, savedMessage.id);
+                
+                // Save reasoning/thoughts to database for future reference
+                const reasoningParts = message.parts?.filter(
+                    (p: any) => p.type === "reasoning" && p.text?.trim()
+                ) || [];
+                
+                if (reasoningParts.length > 0) {
+                    const thoughtContent = reasoningParts
+                        .map((p: any) => p.text)
+                        .join("\n");
+                    
+                    // Determine task context from tool calls
+                    let taskContext = "general";
+                    if (toolParts.some((p: any) => p.type === "tool-replaceForm")) {
+                        taskContext = "build_form_structure";
+                    } else if (toolParts.some((p: any) => p.type === "tool-updateFormStyle")) {
+                        taskContext = "apply_style";
+                    } else if (toolParts.some((p: any) => p.type === "tool-updateDesignSettings")) {
+                        taskContext = "apply_design";
+                    } else if (toolParts.some((p: any) => p.type === "tool-updateThankYouPage")) {
+                        taskContext = "customize_thank_you";
+                    } else if (toolParts.some((p: any) => p.type?.includes("Field") || p.type?.includes("Section"))) {
+                        taskContext = "modify_form";
+                    }
+                    
+                    await saveAIThought(session.id, savedMessage.id, thoughtContent, taskContext);
+                }
             }
         },
     });
 
+    // Track status ref for use in continuations
+    const statusRef = useRef(status);
+    useEffect(() => {
+        statusRef.current = status;
+    }, [status]);
+
     // Load existing messages when session is ready
     useEffect(() => {
+        let isMounted = true;
+        
         async function loadMessages() {
             if (!session || !isSessionReady) return;
             
             try {
                 const savedMessages = await getChatMessages(session.id);
+                if (!isMounted) return;
+                
                 if (savedMessages.length > 0) {
                     // Track which messages have already been applied
                     const appliedIds = new Set<string>();
@@ -281,13 +343,21 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         }
 
         loadMessages();
-    }, [session, isSessionReady, setMessages]);
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [session?.id, isSessionReady, setMessages]);
 
-    // Custom sendMessage that saves user message first
+    // Custom sendMessage that saves user message first (for user-initiated messages)
     const sendMessage = useCallback(
         async (options: { text: string }) => {
             if (session) {
                 await saveChatMessage(session.id, "user", options.text);
+            }
+            // Reset workflow when user starts a new conversation topic
+            if (!options.text.toLowerCase().includes("continue")) {
+                setCurrentWorkflowStep("structure");
             }
             originalSendMessage(options);
         },
@@ -304,6 +374,8 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         try {
             await clearChatHistory(formId);
             setMessages([]);
+            setCurrentWorkflowStep("structure");
+            setAppliedMessageIds(new Set());
             // Reinitialize session
             const newSession = await getOrCreateChatSession(formId);
             setSession(newSession);
@@ -768,12 +840,10 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         async (messageId: string) => {
             // Use the database ID if we have a mapping, otherwise use the provided ID
             const dbMessageId = messageIdMap.current.get(messageId) || messageId;
-            console.log("markMessageApplied called with messageId:", messageId, "dbMessageId:", dbMessageId);
             
             setAppliedMessageIds((prev) => new Set(prev).add(messageId));
             try {
                 await markActionsApplied(dbMessageId);
-                console.log("markActionsApplied succeeded for dbMessageId:", dbMessageId);
             } catch (error) {
                 console.error("Failed to mark actions as applied:", error);
             }
@@ -781,17 +851,35 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         []
     );
 
-    // Get a human-readable description of action type for workflow context
+    // Determine next workflow step based on action types
+    const getNextWorkflowStep = useCallback((actions: FormToolAction[]): WorkflowStep => {
+        const types = actions.map(a => a.type);
+        if (types.includes("replaceForm") || types.includes("addFields") || types.includes("addSection")) {
+            return "style";
+        }
+        if (types.includes("updateFormStyle")) {
+            return "design";
+        }
+        if (types.includes("updateDesignSettings")) {
+            return "thankYou";
+        }
+        if (types.includes("updateThankYouPage")) {
+            return "complete";
+        }
+        return currentWorkflowStep;
+    }, [currentWorkflowStep]);
+
+    // Get a human-readable description of action type
     const getActionStepName = useCallback((actions: FormToolAction[]): string => {
         const types = actions.map(a => a.type);
         if (types.includes("replaceForm") || types.includes("addFields") || types.includes("addSection")) {
-            return "form structure/fields";
+            return "form structure";
         }
         if (types.includes("updateFormStyle")) {
             return "form style";
         }
         if (types.includes("updateDesignSettings")) {
-            return "design settings";
+            return "design";
         }
         if (types.includes("updateThankYouPage")) {
             return "thank you page";
@@ -799,14 +887,54 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         return "changes";
     }, []);
 
+    // Continue workflow to next step after user applies changes
+    const continueWorkflow = useCallback(
+        (completedStep: WorkflowStep) => {
+            // Advance to next step
+            const stepOrder: WorkflowStep[] = ["structure", "style", "design", "thankYou", "complete"];
+            const currentIndex = stepOrder.indexOf(completedStep);
+            const nextStep = stepOrder[Math.min(currentIndex + 1, stepOrder.length - 1)];
+            
+            // Only continue if not complete
+            if (nextStep !== "complete") {
+                // Update the ref immediately so transport picks it up
+                currentWorkflowStepRef.current = nextStep;
+                setCurrentWorkflowStep(nextStep);
+                
+                // Wait for status to be ready before sending
+                const sendContinue = async () => {
+                    // Check if ready, if not, wait and retry
+                    if (statusRef.current !== "ready") {
+                        setTimeout(sendContinue, 100);
+                        return;
+                    }
+                    
+                    try {
+                        if (session) {
+                            await saveChatMessage(session.id, "user", "Continue");
+                        }
+                        originalSendMessage({ text: "Continue" });
+                    } catch (error) {
+                        console.error("Failed to continue workflow:", error);
+                    }
+                };
+                
+                // Start the continuation after a brief delay
+                setTimeout(sendContinue, 300);
+            } else {
+                setCurrentWorkflowStep(nextStep);
+            }
+        },
+        [originalSendMessage, session]
+    );
+
     // Deny changes and ask AI what to do instead
     const denyChanges = useCallback(
         (messageId: string, actions: FormToolAction[]) => {
             const stepName = getActionStepName(actions);
-            // Send a message to the AI indicating the user denied the changes
-            sendMessage({ text: `I don't like these ${stepName}. What else can you suggest?` });
+            originalSendMessage({ text: `I don't like this ${stepName}. Suggest something different.` });
         },
-        [sendMessage, getActionStepName]
+        [originalSendMessage, getActionStepName]
     );
 
     const value: AIChatContextType = {
@@ -816,6 +944,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         closeSidebar,
         messages,
         sendMessage,
+        continueWorkflow,
         status,
         error,
         stop,
@@ -829,6 +958,7 @@ export function AIChatProvider({ children, formId }: AIChatProviderProps) {
         appliedMessageIds,
         markMessageApplied,
         denyChanges,
+        currentWorkflowStep,
     };
 
     return <AIChatContext.Provider value={value}>{children}</AIChatContext.Provider>;

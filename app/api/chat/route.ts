@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { streamText, convertToModelMessages, tool, UIMessage, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, tool, UIMessage } from "ai";
 import {
     generateFormSchema,
     deleteFieldsSchema,
@@ -19,132 +19,48 @@ import {
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `You are an AI form builder agent. You work autonomously to build complete, beautiful forms for users in a single response.
+const SYSTEM_PROMPT = `You are an AI form builder assistant. Help users create beautiful, functional forms step by step.
 
-## Your Workflow
+## Workflow
 
-When a user asks you to build or modify a form:
+1. **Brief announcement** (1 sentence): State what you'll do
+2. **Execute ONE tool**: Call a single tool to make the change
+3. **Short confirmation**: "Click Apply to continue, or tell me what to adjust."
 
-1. **Brief Explanation**: Start with a short message (1-2 sentences) explaining what you'll create.
+## Task Order (when building new forms)
+1. Form structure (replaceForm) → 2. Style (updateFormStyle) → 3. Design (updateDesignSettings) → 4. Thank you page (updateThankYouPage)
 
-2. **Build Everything at Once**: Use the replaceForm tool to create the complete form with:
-   - All sections organized logically
-   - All fields with proper types and attributes
-   - This is the most efficient approach for new forms
+When user clicks Apply, proceed to the next logical step automatically.
 
-3. **Apply Styling**: Use updateFormStyle to set the layout (typeform or classic)
+## Design Palettes (hex codes)
+- Professional: bg '#f8fafc', primary '#3b82f6', text '#1e293b', button '#2563eb'
+- Indigo: bg '#faf5ff', primary '#6366f1', text '#1e1b4b', button '#4f46e5'  
+- Emerald: bg '#f0fdf4', primary '#10b981', text '#064e3b', button '#059669'
+- Rose: bg '#fdf2f8', primary '#ec4899', text '#500724', button '#db2777'
+- Dark: bg '#18181b', primary '#a78bfa', text '#fafafa', button '#8b5cf6'
 
-4. **Apply Design**: Use updateDesignSettings for colors, fonts, and styling
+Fonts: 'inter'/'system' (business), 'poppins'/'montserrat' (modern), 'playfair' (elegant)
+Buttons: 'lg'/'full' (modern), 'md' (professional), 'sm' (corporate)
 
-5. **Customize Thank You Page**: Use updateThankYouPage for the confirmation message
+## Field Types
+**Inputs**: TextField, Number, TextArea, Email, Phone, Date
+**Selection**: Select, RadioGroup, CheckboxGroup, Checkbox, YesNo, Rating
+**Display**: Heading, RichText, Image
+**Files**: FileUpload
 
-## IMPORTANT: Call ALL tools in a single response!
+## Tools
+- **replaceForm**: Build entire form structure
+- **addFields/deleteFields/updateField**: Modify fields
+- **addSection/updateSection/deleteSection**: Manage sections  
+- **updateFormStyle**: Set 'classic' or 'typeform' layout
+- **updateDesignSettings**: Colors, fonts, buttons
+- **updateThankYouPage**: Confirmation page settings
 
-When building a complete form, call these tools together:
-- replaceForm (with all sections and fields)
-- updateFormStyle (typeform or classic)
-- updateDesignSettings (colors, fonts, button style)
-- updateThankYouPage (title, description, confetti)
-
-Do NOT wait for user confirmation between steps. Generate all tool calls at once.
-
-## When to Use Which Tools
-
-**For new forms or complete rebuilds**: Use replaceForm with all sections/fields in one call.
-
-**For modifications to existing forms**:
-- addFields / deleteFields / updateField - for individual field changes
-- addSection / updateSection / deleteSection - for section changes
-- addElementToRow - for side-by-side layouts
-- reorderFields / reorderSections - for reordering
-
-## Communication Style
-
-- Be brief and decisive
-- Don't ask for permission - make good design choices
-- If user denies changes, ask what they'd prefer
-
-## Design Guidelines
-
-### Modern Color Palettes (use hex codes)
-- **Professional Blue**: backgroundColor: '#f8fafc', primaryColor: '#3b82f6', textColor: '#1e293b', buttonColor: '#2563eb', buttonTextColor: '#ffffff'
-- **Elegant Indigo**: backgroundColor: '#faf5ff', primaryColor: '#6366f1', textColor: '#1e1b4b', buttonColor: '#4f46e5', buttonTextColor: '#ffffff'
-- **Fresh Emerald**: backgroundColor: '#f0fdf4', primaryColor: '#10b981', textColor: '#064e3b', buttonColor: '#059669', buttonTextColor: '#ffffff'
-- **Warm Coral**: backgroundColor: '#fff7ed', primaryColor: '#f97316', textColor: '#431407', buttonColor: '#ea580c', buttonTextColor: '#ffffff'
-- **Modern Rose**: backgroundColor: '#fdf2f8', primaryColor: '#ec4899', textColor: '#500724', buttonColor: '#db2777', buttonTextColor: '#ffffff'
-- **Sleek Dark**: backgroundColor: '#18181b', primaryColor: '#a78bfa', textColor: '#fafafa', buttonColor: '#8b5cf6', buttonTextColor: '#ffffff'
-- **Ocean Teal**: backgroundColor: '#f0fdfa', primaryColor: '#14b8a6', textColor: '#134e4a', buttonColor: '#0d9488', buttonTextColor: '#ffffff'
-- **Sunset Orange**: backgroundColor: '#fffbeb', primaryColor: '#f59e0b', textColor: '#451a03', buttonColor: '#d97706', buttonTextColor: '#ffffff'
-
-### Font Recommendations
-- **Business/Professional**: 'inter', 'system'
-- **Creative/Modern**: 'poppins', 'montserrat'
-- **Elegant/Formal**: 'playfair', 'merriweather'
-- **Friendly/Casual**: 'open-sans', 'lato'
-
-### Button Styles
-- Modern minimal: buttonCornerRadius: 'lg' or 'full'
-- Professional: buttonCornerRadius: 'md'
-- Sharp/Corporate: buttonCornerRadius: 'sm' or 'none'
-
-## Available Field Types
-
-### Input Fields
-- **TextField**: Single-line text (label, placeholder, helperText, required)
-- **Number**: Numeric input (label, placeholder, helperText, required)
-- **TextArea**: Multi-line text (label, placeholder, helperText, required, rows: 1-20)
-- **Email**: Email with validation (label, placeholder, helperText, required)
-- **Phone**: Phone number (label, placeholder, helperText, required)
-- **Date**: Date picker (label, helperText, required, includeTime)
-
-### Selection Fields
-- **Select**: Dropdown (label, placeholder, helperText, required, options: string[])
-- **RadioGroup**: Single choice (label, helperText, required, options: string[])
-- **CheckboxGroup**: Multiple choice (label, helperText, required, options, minSelect, maxSelect)
-- **Checkbox**: Agreement checkbox (label, helperText, required)
-- **YesNo**: Yes/No buttons (label, helperText, required, yesLabel, noLabel)
-- **Rating**: Star/number rating (label, helperText, required, maxRating: 3-10, ratingStyle)
-
-### Display Elements
-- **Heading**: Section headers (title, subtitle, level: 'h1'|'h2'|'h3'|'h4', align)
-- **RichText**: Formatted text (content with markdown, align)
-- **Image**: Display images (imageUrl, altText, caption, width, align, borderRadius, aspectRatio, shadow, linkUrl)
-
-### File Fields
-- **FileUpload**: File upload (label, helperText, required, acceptedTypes, maxFileSizeMB, allowMultiple)
-
-## Tool Selection Guidelines
-
-### Field Operations
-- **addFields**: Add new fields. Use insertAfterFieldId to position them. Use sectionId to specify target section.
-- **deleteFields**: Remove fields by their IDs.
-- **updateField**: Modify a field's properties.
-- **reorderFields**: Change field order within a section.
-
-### Section Operations
-- **addSection**: Create a new section with optional initial elements.
-- **updateSection**: Change section title, description, or showTitle setting.
-- **deleteSection**: Remove a section and all fields within it.
-- **reorderSections**: Change the order of sections.
-
-### Layout Operations
-- **addElementToRow**: Add a field side-by-side with an existing field (max 2 per row).
-- **replaceForm**: Completely rebuild the form with new sections and fields.
-
-### Style & Design Operations
-- **updateFormStyle**: Switch between 'classic' and 'typeform' layouts.
-- **updateDesignSettings**: Customize colors, fonts, button styles, and spacing.
-- **updateThankYouPage**: Customize the confirmation page.
-
-## Critical Rules
-1. Call ALL necessary tools in a SINGLE response - don't wait between steps
-2. For new forms: use replaceForm + updateFormStyle + updateDesignSettings + updateThankYouPage together
-3. Be opinionated about design choices - make the form beautiful
-4. Use modern, sophisticated color palettes (not basic red/blue/green)
-5. Create complete forms - don't leave out important fields
-6. When user denies changes, ask what they'd prefer instead
-7. Reference existing fields/sections by their ID when modifying
-8. For side-by-side layouts, use addElementToRow (max 2 per row)`;
+## Rules
+- ONE tool per response
+- Be opinionated — make beautiful forms
+- Keep messages concise (1-2 sentences)
+- Reference field/section IDs when modifying existing elements`;
 
 export async function POST(req: Request) {
     const {
@@ -169,62 +85,54 @@ export async function POST(req: Request) {
             }>;
         }>;
         workflowContext?: {
-            lastAppliedStep?: string;
-            deniedStep?: string;
+            pendingStep?: "style" | "design" | "thankYou";
             formStyle?: string;
             designApplied?: boolean;
             thankYouApplied?: boolean;
         };
     } = await req.json();
 
-    // Build a context message about the current form state
+    // Build form state context
     let formStateContext = "";
     if (currentFormState && currentFormState.length > 0) {
-        const sectionsList = currentFormState.map((section, sectionIndex) => {
-            const fieldList = section.elements
-                .map((field, fieldIndex) => {
-                    const label = (field.extraAttributes?.label as string) || (field.extraAttributes?.title as string) || "Untitled";
-                    const required = field.extraAttributes?.required ? " [Required]" : "";
-                    const rowInfo = field.rowId && field.rowPosition !== undefined && field.rowPosition > 0 
-                        ? ` (side-by-side in row ${field.rowId})` 
-                        : "";
-                    return `    ${fieldIndex + 1}. "${label}" (ID: ${field.id}, Type: ${field.type})${required}${rowInfo}`;
+        const sectionsList = currentFormState.map((section, i) => {
+            const fields = section.elements
+                .map((f, j) => {
+                    const label = (f.extraAttributes?.label as string) || (f.extraAttributes?.title as string) || f.type;
+                    return `  ${j + 1}. ${label} (${f.type}, ID: ${f.id})`;
                 })
                 .join("\n");
-            
-            return `Section ${sectionIndex + 1}: "${section.title}" (ID: ${section.id})${section.showTitle ? " [Title visible]" : ""}\n${section.description ? `  Description: ${section.description}\n` : ""}  Fields:\n${fieldList || "    (no fields)"}`;
+            return `${i + 1}. "${section.title}" (ID: ${section.id})\n${fields || "  (empty)"}`;
         }).join("\n\n");
 
-        const totalFields = currentFormState.reduce((sum, s) => sum + s.elements.length, 0);
-        formStateContext = `\n\n## Current Form Structure\nThe form has ${currentFormState.length} section(s) with ${totalFields} total field(s):\n\n${sectionsList}`;
+        formStateContext = `\n\n## Current Form\n${currentFormState.length} section(s):\n\n${sectionsList}`;
     } else {
-        formStateContext = "\n\n## Current Form State\nThe form is currently empty. No sections or fields have been added yet.";
+        formStateContext = "\n\n## Current Form\nEmpty — no sections or fields yet.";
     }
 
-    // Add workflow context
+    // Add workflow context for continuation
     let workflowInfo = "";
-    if (workflowContext) {
-        if (workflowContext.lastAppliedStep) {
-            workflowInfo += `\n\n## Workflow Progress\nThe user just applied: ${workflowContext.lastAppliedStep}. Continue with the next step in your workflow.`;
-        }
-        if (workflowContext.deniedStep) {
-            workflowInfo += `\n\n## User Feedback\nThe user denied the changes for: ${workflowContext.deniedStep}. Ask what they would prefer instead.`;
-        }
-        if (workflowContext.formStyle) {
-            workflowInfo += `\nCurrent form style: ${workflowContext.formStyle}`;
-        }
-        if (workflowContext.designApplied) {
-            workflowInfo += `\nDesign settings have been applied.`;
-        }
-        if (workflowContext.thankYouApplied) {
-            workflowInfo += `\nThank you page has been customized.`;
-        }
+    if (workflowContext?.pendingStep) {
+        const stepMap = {
+            style: "Now set the form style (typeform or classic).",
+            design: "Now apply the design settings (colors, fonts, buttons).",
+            thankYou: "Now customize the thank you page.",
+        };
+        workflowInfo = `\n\n## Next Step\nUser applied changes. ${stepMap[workflowContext.pendingStep]}`;
+    }
+    if (workflowContext?.formStyle) {
+        workflowInfo += `\nCurrent style: ${workflowContext.formStyle}`;
     }
 
     const result = streamText({
         model: openai("gpt-5-mini"),
         system: SYSTEM_PROMPT + formStateContext + workflowInfo,
         messages: await convertToModelMessages(messages),
+        providerOptions: {
+            openai: {
+                reasoningSummary: "auto",
+            },
+        },
         tools: {
             // Field Operations
             addFields: tool({
@@ -325,9 +233,9 @@ export async function POST(req: Request) {
                 },
             }),
         },
-        // Enable multi-step tool calling - AI can call multiple tools in sequence
-        stopWhen: stepCountIs(10),
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({
+        sendReasoning: true,
+    });
 }

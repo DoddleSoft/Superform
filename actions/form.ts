@@ -524,6 +524,29 @@ export async function saveThankYouPage(id: string, thankYouPage: ThankYouPageSet
     }
 }
 
+// ============== Form Settings (notifications, access, advanced) ==============
+
+export async function saveFormSettings(id: string, settings: Record<string, any>) {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from("forms")
+        .update({
+            settings: settings,
+            has_unpublished_changes: true,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    revalidatePath(`/builder/${id}`);
+    return data;
+}
+
+
 // ============== Form Version Operations ==============
 
 export async function getFormVersions(formId: string) {

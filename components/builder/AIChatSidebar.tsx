@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useAIChat, FormToolAction } from "@/context/AIChatContext";
+import { useAIChat, FormToolAction, WorkflowStep } from "@/context/AIChatContext";
 import { 
     LuSend, 
     LuCheck, 
@@ -28,6 +28,7 @@ import {
     LuUpload,
     LuImage,
     LuChevronDown,
+    LuChevronUp,
     LuColumns2,
     LuLayers,
     LuArrowUpDown,
@@ -38,6 +39,7 @@ import {
     LuListChecks,
     LuAlignLeft,
     LuX,
+    LuBrain,
 } from "react-icons/lu";
 
 // Field type icon mapping
@@ -390,6 +392,7 @@ export function AIChatSidebar() {
     const {
         messages,
         sendMessage,
+        continueWorkflow,
         status,
         error,
         stop,
@@ -399,6 +402,7 @@ export function AIChatSidebar() {
         markMessageApplied,
         denyChanges,
         clearChat,
+        currentWorkflowStep,
     } = useAIChat();
 
     const [input, setInput] = useState("");
@@ -407,6 +411,7 @@ export function AIChatSidebar() {
     const inputRef = useRef<HTMLInputElement>(null);
     const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
     const [collapsedActions, setCollapsedActions] = useState<Set<string>>(new Set());
+    const [collapsedThinking, setCollapsedThinking] = useState<Set<string>>(new Set());
 
     // Track if user has scrolled up
     const handleScroll = () => {
@@ -512,29 +517,65 @@ export function AIChatSidebar() {
         if (actions.length === 1) {
             const action = actions[0];
             switch (action.type) {
-                case "addFields": return `Adding ${action.elements.length} field${action.elements.length > 1 ? 's' : ''}`;
-                case "deleteFields": return `Removing ${action.fieldIds.length} field${action.fieldIds.length > 1 ? 's' : ''}`;
-                case "updateField": return "Updating field";
-                case "replaceForm": return `Building form with ${action.sections.length} section${action.sections.length > 1 ? 's' : ''}`;
-                case "addSection": return `Adding section "${action.title}"`;
-                case "updateSection": return "Updating section";
-                case "deleteSection": return "Removing section";
-                case "reorderFields": return "Reordering fields";
-                case "reorderSections": return "Reordering sections";
-                case "addElementToRow": return "Creating side-by-side layout";
-                case "updateFormStyle": return `Switching to ${action.style} style`;
-                case "updateDesignSettings": return "Updating design";
-                case "updateThankYouPage": return "Customizing thank you page";
-                default: return "Making changes";
+                case "addFields": return `Add ${action.elements.length} field${action.elements.length > 1 ? 's' : ''}`;
+                case "deleteFields": return `Remove ${action.fieldIds.length} field${action.fieldIds.length > 1 ? 's' : ''}`;
+                case "updateField": return "Update field";
+                case "replaceForm": return `Create form with ${action.sections.length} section${action.sections.length > 1 ? 's' : ''}`;
+                case "addSection": return `Add "${action.title}" section`;
+                case "updateSection": return "Update section";
+                case "deleteSection": return "Remove section";
+                case "reorderFields": return "Reorder fields";
+                case "reorderSections": return "Reorder sections";
+                case "addElementToRow": return "Side-by-side layout";
+                case "updateFormStyle": return `${action.style} style`;
+                case "updateDesignSettings": return "Design settings";
+                case "updateThankYouPage": return "Thank you page";
+                default: return "Changes";
             }
         }
         return `${actions.length} changes`;
     };
 
-    // Apply all actions
+    // Determine workflow step from actions
+    const getWorkflowStepFromActions = (actions: FormToolAction[]): "structure" | "style" | "design" | "thankYou" | "complete" => {
+        const types = actions.map(a => a.type);
+        if (types.includes("replaceForm") || types.includes("addFields") || types.includes("addSection")) {
+            return "structure";
+        }
+        if (types.includes("updateFormStyle")) {
+            return "style";
+        }
+        if (types.includes("updateDesignSettings")) {
+            return "design";
+        }
+        if (types.includes("updateThankYouPage")) {
+            return "thankYou";
+        }
+        return "structure";
+    };
+
+    // Apply actions and continue workflow
     const handleApplyActions = async (actions: FormToolAction[], messageId: string) => {
+        // Don't apply if AI is still streaming
+        if (status !== "ready") return;
+        
         applyMultipleActions(actions);
         await markMessageApplied(messageId);
+        
+        // Determine what step was just completed and continue
+        const completedStep = getWorkflowStepFromActions(actions);
+        continueWorkflow(completedStep);
+    };
+
+    // Skip current step and continue to next
+    const handleSkipStep = (actions: FormToolAction[], messageId: string) => {
+        // Don't skip if AI is still streaming
+        if (status !== "ready") return;
+        
+        // Mark as applied without actually applying
+        markMessageApplied(messageId);
+        const completedStep = getWorkflowStepFromActions(actions);
+        continueWorkflow(completedStep);
     };
 
     // Quick suggestions
@@ -628,18 +669,34 @@ export function AIChatSidebar() {
                     </div>
                 ) : (
                     <div className="p-4 space-y-4">
-                        {messages.map((message: any) => {
+                        {/* Deduplicate messages by ID */}
+                        {Array.from(new Map(messages.map((m: any) => [m.id, m])).values()).map((message: any) => {
                             const parts = message.parts || [];
                             const toolActions = message.role === "assistant"
                                 ? extractAllToolActions(parts)
                                 : [];
                             const isApplied = appliedMessageIds.has(message.id);
                             
+                            // Hide auto-continuation messages from user
+                            if (message.role === "user") {
+                                const userText = parts.find((p: any) => p.type === "text")?.text || "";
+                                const lowerText = userText.toLowerCase().trim();
+                                // Hide "continue" messages and similar auto-generated ones
+                                if (lowerText === "continue" || 
+                                    lowerText.includes("changes applied") ||
+                                    lowerText.includes("continue to the next")) {
+                                    return null;
+                                }
+                            }
+                            
                             // Find the index of the first tool call to split text before/after
                             const firstToolIndex = parts.findIndex((p: any) => p.type?.startsWith("tool-"));
                             const lastToolIndex = parts.findLastIndex((p: any) => p.type?.startsWith("tool-"));
                             
-                            // Text parts before any tool calls
+                            // Extract reasoning parts (AI thinking)
+                            const reasoningParts = parts.filter((p: any) => p.type === "reasoning" && p.text?.trim());
+                            
+                            // Text parts before any tool calls (excluding reasoning)
                             const textBefore = parts.slice(0, firstToolIndex === -1 ? parts.length : firstToolIndex)
                                 .filter((p: any) => p.type === "text" && p.text?.trim());
                             
@@ -648,12 +705,13 @@ export function AIChatSidebar() {
                                 ? parts.slice(lastToolIndex + 1).filter((p: any) => p.type === "text" && p.text?.trim())
                                 : [];
                             
+                            const hasReasoning = reasoningParts.length > 0;
                             const hasTextBefore = textBefore.length > 0;
                             const hasTextAfter = textAfter.length > 0;
                             const hasToolActions = toolActions.length > 0;
                             
                             // Skip rendering empty assistant messages (still streaming)
-                            if (message.role === "assistant" && !hasTextBefore && !hasTextAfter && !hasToolActions) {
+                            if (message.role === "assistant" && !hasReasoning && !hasTextBefore && !hasTextAfter && !hasToolActions) {
                                 return null;
                             }
 
@@ -669,8 +727,81 @@ export function AIChatSidebar() {
                                                 : "bg-base-100 border border-base-200 rounded-2xl rounded-bl-md shadow-sm"
                                         }`}
                                     >
-                                        {/* Text content BEFORE tool calls */}
-                                        {hasTextBefore && (
+                                        {/* User message content */}
+                                        {message.role === "user" && (
+                                            <div className="px-4 py-3">
+                                                {parts.filter((p: any) => p.type === "text").map((part: any, index: number) => (
+                                                    <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed">
+                                                        {part.text}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Reasoning/Thinking section - collapsible (assistant only) */}
+                                        {message.role === "assistant" && hasReasoning && (() => {
+                                            // Auto-collapse when message has content after reasoning (meaning it's done)
+                                            const isComplete = hasTextBefore || hasToolActions || hasTextAfter;
+                                            const isThinkingCollapsed = isComplete && !collapsedThinking.has(`${message.id}-expanded`);
+                                            const fullText = reasoningParts.map((p: any) => p.text).join("");
+                                            const firstLine = fullText.split("\n")[0].slice(0, 80) + (fullText.length > 80 ? "..." : "");
+                                            
+                                            return (
+                                                <div className="px-3 py-2 bg-amber-500/5 border-b border-amber-500/10">
+                                                    <div className="flex items-start gap-2">
+                                                        <div className="w-5 h-5 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                                                            <LuBrain className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                                                                    {isComplete ? "Thought" : "Thinking"}
+                                                                </div>
+                                                                {isComplete && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setCollapsedThinking(prev => {
+                                                                                const next = new Set(prev);
+                                                                                const key = `${message.id}-expanded`;
+                                                                                if (next.has(key)) {
+                                                                                    next.delete(key);
+                                                                                } else {
+                                                                                    next.add(key);
+                                                                                }
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        className="text-[10px] text-amber-600/60 hover:text-amber-600 dark:text-amber-400/60 dark:hover:text-amber-400 transition-colors flex items-center gap-1"
+                                                                    >
+                                                                        {isThinkingCollapsed ? (
+                                                                            <><LuChevronDown className="w-3 h-3" /> Show</>
+                                                                        ) : (
+                                                                            <><LuChevronUp className="w-3 h-3" /> Hide</>
+                                                                        )}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                            {isThinkingCollapsed ? (
+                                                                <div className="text-xs text-base-content/50 italic leading-relaxed mt-1 truncate">
+                                                                    {firstLine}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-500/20 scrollbar-track-transparent mt-1">
+                                                                    <div className="text-xs text-base-content/60 italic leading-relaxed pr-2">
+                                                                        {reasoningParts.map((part: any, index: number) => (
+                                                                            <span key={index}>{part.text}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                        
+                                        {/* Text content BEFORE tool calls (assistant only) */}
+                                        {message.role === "assistant" && hasTextBefore && (
                                             <div className="px-4 py-3">
                                                 {textBefore.map((part: any, index: number) => (
                                                     <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -680,8 +811,8 @@ export function AIChatSidebar() {
                                             </div>
                                         )}
 
-                                        {/* Tool actions */}
-                                        {toolActions.length > 0 && (
+                                        {/* Tool actions (assistant only) */}
+                                        {message.role === "assistant" && toolActions.length > 0 && (
                                             <div className="border-t border-base-200">
                                                 {/* Actions header with toggle */}
                                                 <div className="px-4 py-2 bg-base-200/30">
@@ -739,34 +870,59 @@ export function AIChatSidebar() {
                                                             <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
                                                                 <LuCheck className="w-3 h-3 text-white" />
                                                             </div>
-                                                            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Applied successfully</span>
+                                                            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Applied</span>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex gap-2">
-                                                            {/* Deny button */}
-                                                            <button
-                                                                onClick={() => denyChanges(message.id, toolActions)}
-                                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-base-200 hover:bg-rose-500/10 text-base-content/60 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/20 rounded-xl font-medium text-sm transition-all duration-200"
-                                                            >
-                                                                <LuX className="w-4 h-4" />
-                                                                Deny
-                                                            </button>
-                                                            {/* Apply button */}
-                                                            <button
-                                                                onClick={() => handleApplyActions(toolActions, message.id)}
-                                                                className="flex-[2] flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-content rounded-xl font-medium text-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 active:scale-[0.98]"
-                                                            >
-                                                                <LuCheck className="w-4 h-4" />
-                                                                Apply
-                                                            </button>
-                                                        </div>
+                                                        (() => {
+                                                            const completedStep = getWorkflowStepFromActions(toolActions);
+                                                            const isFinalStep = completedStep === "thankYou";
+                                                            const isSkippable = ["style", "design", "thankYou"].includes(completedStep);
+                                                            const isDisabled = status !== "ready";
+                                                            
+                                                            return (
+                                                                <div className="flex gap-2">
+                                                                    {/* Deny button */}
+                                                                    <button
+                                                                        onClick={() => denyChanges(message.id, toolActions)}
+                                                                        disabled={isDisabled}
+                                                                        className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-base-200 hover:bg-rose-500/10 text-base-content/60 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/20 rounded-xl font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        title="Request different changes"
+                                                                    >
+                                                                        <LuX className="w-4 h-4" />
+                                                                    </button>
+                                                                    
+                                                                    {/* Skip button (only for style/design/thankYou) */}
+                                                                    {isSkippable && !isFinalStep && (
+                                                                        <button
+                                                                            onClick={() => handleSkipStep(toolActions, message.id)}
+                                                                            disabled={isDisabled}
+                                                                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-base-200 hover:bg-base-300 text-base-content/60 hover:text-base-content rounded-xl font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                            title="Skip this step"
+                                                                        >
+                                                                            <LuArrowRight className="w-4 h-4" />
+                                                                            Skip
+                                                                        </button>
+                                                                    )}
+                                                                    
+                                                                    {/* Apply button */}
+                                                                    <button
+                                                                        onClick={() => handleApplyActions(toolActions, message.id)}
+                                                                        disabled={isDisabled}
+                                                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-content rounded-xl font-medium text-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                                                                    >
+                                                                        <LuCheck className="w-4 h-4" />
+                                                                        {isFinalStep ? "Apply" : "Apply & Continue"}
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })()
                                                     )}
                                                 </div>
                                             </div>
                                         )}
                                         
-                                        {/* Text content AFTER tool calls */}
-                                        {hasTextAfter && (
+                                        {/* Text content AFTER tool calls (assistant only) */}
+                                        {message.role === "assistant" && hasTextAfter && (
                                             <div className={`px-4 py-3 ${hasToolActions ? 'border-t border-base-200' : ''}`}>
                                                 {textAfter.map((part: any, index: number) => (
                                                     <p key={index} className="whitespace-pre-wrap text-sm leading-relaxed">

@@ -158,7 +158,8 @@ export function BuilderMain({ form, submissions }: { form: any, submissions: For
                     currentVersion: form.current_version || 1,
                     publishedAt: form.published_at || null,
                 },
-                publishedSnapshot
+                publishedSnapshot,
+                form.settings || null
             );
         }
     }, [form, setSections, setFormMetadata]);

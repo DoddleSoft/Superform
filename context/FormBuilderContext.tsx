@@ -77,7 +77,8 @@ type FormBuilderContextType = {
         designSettings?: FormDesignSettings, 
         thankYouPage?: ThankYouPageSettings,
         versionInfo?: { currentVersion: number; publishedAt: string | null },
-        publishedSnapshot?: PublishedSnapshot
+        publishedSnapshot?: PublishedSnapshot,
+        settings?: Record<string, any> | null
     ) => void;
     
     // Form Style
@@ -107,6 +108,9 @@ type FormBuilderContextType = {
     hasUnpublishedChanges: boolean;
     publishedAt: string | null;
     setVersionInfo: (version: number, publishedAt: string | null) => void;
+    // Form-level settings (notifications, access control, advanced)
+    formSettings: Record<string, any> | null;
+    setFormSettings: Dispatch<SetStateAction<Record<string, any> | null>>;
     
     // Published snapshot management
     updatePublishedSnapshot: (snapshot: PublishedSnapshot) => void;
@@ -147,6 +151,7 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
     // Versioning state
     const [currentVersion, setCurrentVersion] = useState<number>(0);
     const [publishedAt, setPublishedAt] = useState<string | null>(null);
+    const [formSettings, setFormSettings] = useState<Record<string, any> | null>(null);
     
     // Published snapshot for diff-based comparison
     const [publishedSnapshot, setPublishedSnapshot] = useState<PublishedSnapshot>({
@@ -193,7 +198,8 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         designSettingsData?: FormDesignSettings,
         thankYouPageData?: ThankYouPageSettings,
         versionInfo?: { currentVersion: number; publishedAt: string | null },
-        snapshot?: PublishedSnapshot
+        snapshot?: PublishedSnapshot,
+        settings?: Record<string, any> | null
     ) => {
         setFormId(id);
         setIsPublished(published);
@@ -213,6 +219,9 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
         }
         if (snapshot) {
             setPublishedSnapshot(snapshot);
+        }
+        if (settings) {
+            setFormSettings(settings);
         }
     }, []);
 
@@ -555,6 +564,8 @@ export function FormBuilderProvider({ children }: { children: ReactNode }) {
                 updatePublishedSnapshot,
                 selectedSection,
                 setSelectedSection,
+                formSettings,
+                setFormSettings,
             }}
         >
             {children}

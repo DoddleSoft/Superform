@@ -165,3 +165,55 @@ export async function clearChatHistory(formId: string): Promise<void> {
         throw error;
     }
 }
+
+export async function saveAIThought(
+    sessionId: string,
+    messageId: string,
+    thoughtContent: string,
+    taskContext?: string
+): Promise<void> {
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase
+        .from("ai_thoughts")
+        .insert({
+            session_id: sessionId,
+            message_id: messageId,
+            thought_content: thoughtContent,
+            task_context: taskContext || null,
+        });
+
+    if (error) {
+        console.error("Error saving AI thought:", error);
+        // Don't throw - this is non-critical
+    }
+}
+
+export async function getAIThoughts(sessionId: string): Promise<Array<{
+    id: string;
+    messageId: string;
+    thoughtContent: string;
+    taskContext?: string;
+    createdAt: Date;
+}>> {
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+        .from("ai_thoughts")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching AI thoughts:", error);
+        return [];
+    }
+
+    return data.map((thought) => ({
+        id: thought.id,
+        messageId: thought.message_id,
+        thoughtContent: thought.thought_content,
+        taskContext: thought.task_context,
+        createdAt: new Date(thought.created_at),
+    }));
+}
