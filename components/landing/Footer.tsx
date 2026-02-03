@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Twitter, Github, Linkedin, Mail } from "lucide-react";
+import { ClipboardList, Twitter, Github, Linkedin, Mail } from "lucide-react";
 
 const footerLinks = {
   product: [
@@ -49,7 +49,7 @@ export default function Footer() {
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-                <Sparkles className="w-5 h-5 text-primary-content" />
+                <ClipboardList className="w-5 h-5 text-primary-content" />
               </div>
               <span className="text-xl font-bold text-base-content">
                 Superform
