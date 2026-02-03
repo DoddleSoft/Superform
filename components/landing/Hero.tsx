@@ -120,7 +120,7 @@ export default function Hero() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="px-4 py-1 rounded-lg bg-base-300/50 text-sm text-base-content/50">
-                    superform.app/builder
+                    superform.page/builder
                   </div>
                 </div>
               </div>
